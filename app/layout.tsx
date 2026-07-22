@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
+import ChatWidget from '@/components/ChatWidget'
 
 export const metadata: Metadata = {
   title: 'PS Dashboard',
@@ -17,10 +18,16 @@ export default function RootLayout({
       <body>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
           <Sidebar />
-          <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', background: 'var(--ltgray)' }}>
+          <main style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '28px 32px',
+            background: '#F7F8FA'
+          }}>
             {children}
           </main>
         </div>
+        <ChatWidget />
       </body>
     </html>
   )
