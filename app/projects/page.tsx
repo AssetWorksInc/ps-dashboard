@@ -7,6 +7,7 @@ export default function ProjectCenter() {
   const [loading, setLoading] = useState(true)
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [activeTab, setActiveTab] = useState('status')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/projects')
@@ -43,6 +44,33 @@ export default function ProjectCenter() {
     { id: 'schedule', label: '📅 Schedule' },
   ]
 
+  const handleSave = async (health: string, status: string) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/projects/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedProject.id, health, status })
+      })
+      const result = await res.json()
+      if (result.success) {
+        setSelectedProject({ ...selectedProject, health, status })
+        setData((prev: any) => ({
+          ...prev,
+          projects: prev.projects.map((p: any) =>
+            p.id === selectedProject.id ? { ...p, health, status } : p
+          )
+        }))
+        alert('✅ Project updated successfully.')
+      } else {
+        alert('❌ Update failed. Please try again.')
+      }
+    } catch {
+      alert('❌ Something went wrong. Please try again.')
+    }
+    setSaving(false)
+  }
+
   return (
     <div style={{ maxWidth: '960px' }}>
 
@@ -64,7 +92,10 @@ export default function ProjectCenter() {
           { label: 'At Risk', value: data?.projects?.filter((p: any) => p.health === 'amber').length || 0, color: '#B7791F' },
           { label: 'Deliverables', value: data?.deliverables?.length || 0, color: '#2E86C1' },
         ].map((k, i) => (
-          <div key={i} style={{ background: '#ffffff', borderRadius: '10px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', borderTop: `3px solid ${k.color}` }}>
+          <div key={i} style={{
+            background: '#ffffff', borderRadius: '10px', padding: '16px 18px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)', borderTop: `3px solid ${k.color}`
+          }}>
             <div style={{ fontSize: '11px', color: '#4A5568', marginBottom: '6px' }}>{k.label}</div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#1B2A4A' }}>{k.value}</div>
           </div>
@@ -75,7 +106,10 @@ export default function ProjectCenter() {
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
 
         {/* Left — project list */}
-        <div style={{ background: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <div style={{
+          background: '#ffffff', borderRadius: '12px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden'
+        }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #F7F8FA', background: '#F7F8FA' }}>
             <p style={{ fontSize: '10px', fontWeight: 700, color: '#4A5568', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Active Engagements
@@ -86,16 +120,22 @@ export default function ProjectCenter() {
               key={p.id}
               onClick={() => { setSelectedProject(p); setActiveTab('status') }}
               style={{
-                width: '100%', textAlign: 'left', background: selectedProject?.id === p.id ? '#e6f4f1' : '#ffffff',
-                border: 'none', borderLeft: `4px solid ${selectedProject?.id === p.id ? '#0D7C66' : 'transparent'}`,
-                borderBottom: '1px solid #F7F8FA', padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s'
+                width: '100%', textAlign: 'left',
+                background: selectedProject?.id === p.id ? '#e6f4f1' : '#ffffff',
+                border: 'none',
+                borderLeft: `4px solid ${selectedProject?.id === p.id ? '#0D7C66' : 'transparent'}`,
+                borderBottom: '1px solid #F7F8FA',
+                padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#1B2A4A', lineHeight: 1.4, paddingRight: '6px' }}>
                   {p.name}
                 </span>
-                <span style={{ fontSize: '8px', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, background: hBg(p.health), color: hColor(p.health), whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span style={{
+                  fontSize: '8px', padding: '2px 6px', borderRadius: '4px', fontWeight: 700,
+                  background: hBg(p.health), color: hColor(p.health), whiteSpace: 'nowrap', flexShrink: 0
+                }}>
                   {p.health === 'green' ? 'ON TRACK' : p.health === 'amber' ? 'AT RISK' : 'CRITICAL'}
                 </span>
               </div>
@@ -110,7 +150,10 @@ export default function ProjectCenter() {
 
         {/* Right — project detail */}
         {selectedProject && (
-          <div style={{ background: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '12px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden'
+          }}>
 
             {/* Project header */}
             <div style={{ padding: '18px 22px', background: '#1B2A4A', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -121,7 +164,10 @@ export default function ProjectCenter() {
                   </h2>
                   <p style={{ fontSize: '11px', color: '#64748b' }}>PM: {selectedProject.pm_name}</p>
                 </div>
-                <span style={{ fontSize: '10px', padding: '4px 12px', borderRadius: '6px', fontWeight: 700, background: hBg(selectedProject.health), color: hColor(selectedProject.health) }}>
+                <span style={{
+                  fontSize: '10px', padding: '4px 12px', borderRadius: '6px', fontWeight: 700,
+                  background: hBg(selectedProject.health), color: hColor(selectedProject.health)
+                }}>
                   {hLabel(selectedProject.health)}
                 </span>
               </div>
@@ -158,12 +204,14 @@ export default function ProjectCenter() {
             {/* Tab content */}
             <div style={{ padding: '20px 22px' }}>
 
-              {/* STATUS */}
+              {/* STATUS TAB */}
               {activeTab === 'status' && (
                 <div>
                   <p style={{ fontSize: '12px', color: '#4A5568', lineHeight: 1.7, marginBottom: '20px' }}>
                     {selectedProject.description || 'No description available.'}
                   </p>
+
+                  {/* Stat boxes */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
                     {[
                       { label: 'Status', value: selectedProject.status || 'Active' },
@@ -176,8 +224,12 @@ export default function ProjectCenter() {
                       </div>
                     ))}
                   </div>
-                  <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#1B2A4A', marginBottom: '10px' }}>Deliverable Summary</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
+
+                  {/* Deliverable summary */}
+                  <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#1B2A4A', marginBottom: '10px' }}>
+                    Deliverable Summary
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '24px' }}>
                     {['done', 'in-progress', 'scheduled', 'upcoming'].map(s => (
                       <div key={s} style={{ background: sBg(s), borderRadius: '8px', padding: '10px 12px', textAlign: 'center' }}>
                         <div style={{ fontSize: '20px', fontWeight: 800, color: sColor(s) }}>
@@ -187,17 +239,104 @@ export default function ProjectCenter() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Update panel */}
+                  <div style={{
+                    background: '#F7F8FA', borderRadius: '10px',
+                    padding: '16px 18px', border: '1px solid #E2E8F0'
+                  }}>
+                    <p style={{
+                      fontSize: '11px', fontWeight: 700, color: '#4A5568',
+                      textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'
+                    }}>
+                      ✏️ Update Project
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                      <div>
+                        <label style={{
+                          fontSize: '10px', fontWeight: 700, color: '#94a3b8',
+                          textTransform: 'uppercase', letterSpacing: '0.5px',
+                          display: 'block', marginBottom: '5px'
+                        }}>
+                          Health
+                        </label>
+                        <select
+                          id="health-select"
+                          defaultValue={selectedProject.health}
+                          key={selectedProject.id + '-health'}
+                          style={{
+                            width: '100%', padding: '9px 12px', fontSize: '12px',
+                            border: '1px solid #E2E8F0', borderRadius: '7px',
+                            color: '#1B2A4A', background: '#ffffff', cursor: 'pointer'
+                          }}
+                        >
+                          <option value="green">🟢 On Track</option>
+                          <option value="amber">🟡 At Risk</option>
+                          <option value="red">🔴 Critical</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{
+                          fontSize: '10px', fontWeight: 700, color: '#94a3b8',
+                          textTransform: 'uppercase', letterSpacing: '0.5px',
+                          display: 'block', marginBottom: '5px'
+                        }}>
+                          Status
+                        </label>
+                        <select
+                          id="status-select"
+                          defaultValue={selectedProject.status}
+                          key={selectedProject.id + '-status'}
+                          style={{
+                            width: '100%', padding: '9px 12px', fontSize: '12px',
+                            border: '1px solid #E2E8F0', borderRadius: '7px',
+                            color: '#1B2A4A', background: '#ffffff', cursor: 'pointer'
+                          }}
+                        >
+                          <option value="active">Active</option>
+                          <option value="on_hold">On Hold</option>
+                          <option value="complete">Complete</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const health = (document.getElementById('health-select') as HTMLSelectElement)?.value
+                        const status = (document.getElementById('status-select') as HTMLSelectElement)?.value
+                        handleSave(health, status)
+                      }}
+                      disabled={saving}
+                      style={{
+                        width: '100%', padding: '11px',
+                        background: saving ? '#94a3b8' : '#1B2A4A',
+                        color: '#ffffff', border: 'none', borderRadius: '8px',
+                        fontSize: '12px', fontWeight: 700,
+                        cursor: saving ? 'default' : 'pointer'
+                      }}
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* DELIVERABLES */}
+              {/* DELIVERABLES TAB */}
               {activeTab === 'deliverables' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {deliverables.length === 0 ? (
-                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px' }}>No deliverables found.</p>
+                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px' }}>
+                      No deliverables found.
+                    </p>
                   ) : deliverables.map((d: any) => (
-                    <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#F7F8FA', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '9px', padding: '3px 8px', borderRadius: '4px', fontWeight: 700, background: sBg(d.status), color: sColor(d.status), whiteSpace: 'nowrap', minWidth: '70px', textAlign: 'center' }}>
+                    <div key={d.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '12px 14px', background: '#F7F8FA', borderRadius: '8px'
+                    }}>
+                      <span style={{
+                        fontSize: '9px', padding: '3px 8px', borderRadius: '4px', fontWeight: 700,
+                        background: sBg(d.status), color: sColor(d.status),
+                        whiteSpace: 'nowrap', minWidth: '70px', textAlign: 'center'
+                      }}>
                         {d.status.toUpperCase()}
                       </span>
                       <div style={{ flex: 1 }}>
@@ -210,15 +349,25 @@ export default function ProjectCenter() {
                 </div>
               )}
 
-              {/* CONTACTS */}
+              {/* CONTACTS TAB */}
               {activeTab === 'contacts' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {contacts.length === 0 ? (
-                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px', gridColumn: '1/-1' }}>No contacts found.</p>
+                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px', gridColumn: '1/-1' }}>
+                      No contacts found.
+                    </p>
                   ) : contacts.map((c: any) => (
-                    <div key={c.id} style={{ background: '#F7F8FA', borderRadius: '10px', padding: '16px', borderLeft: c.is_primary ? '3px solid #0D7C66' : '3px solid #E2E8F0' }}>
+                    <div key={c.id} style={{
+                      background: '#F7F8FA', borderRadius: '10px', padding: '16px',
+                      borderLeft: c.is_primary ? '3px solid #0D7C66' : '3px solid #E2E8F0'
+                    }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#1B2A4A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        <div style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          background: '#1B2A4A', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: '12px', fontWeight: 700,
+                          color: '#fff', flexShrink: 0
+                        }}>
                           {c.name.split(' ').map((n: string) => n[0]).join('')}
                         </div>
                         <div style={{ flex: 1 }}>
@@ -226,11 +375,13 @@ export default function ProjectCenter() {
                           <p style={{ fontSize: '11px', color: '#4A5568' }}>{c.role}</p>
                         </div>
                         {c.is_primary && (
-                          <span style={{ fontSize: '8px', background: '#0D7C66', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700 }}>PRIMARY</span>
+                          <span style={{ fontSize: '8px', background: '#0D7C66', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700 }}>
+                            PRIMARY
+                          </span>
                         )}
                       </div>
                       {c.email && (
-                        <a href={`mailto:${c.email}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#0D7C66', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={`mailto:${c.email}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#2E86C1', textDecoration: 'none', fontWeight: 600 }}>
                           ✉️ {c.email}
                         </a>
                       )}
@@ -239,14 +390,23 @@ export default function ProjectCenter() {
                 </div>
               )}
 
-              {/* SCHEDULE */}
+              {/* SCHEDULE TAB */}
               {activeTab === 'schedule' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {appointments.length === 0 ? (
-                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px' }}>No appointments scheduled.</p>
+                    <p style={{ fontSize: '12px', color: '#4A5568', textAlign: 'center', padding: '40px' }}>
+                      No appointments scheduled.
+                    </p>
                   ) : appointments.map((a: any) => (
-                    <div key={a.id} style={{ display: 'flex', gap: '14px', padding: '14px 16px', background: '#F7F8FA', borderRadius: '10px', alignItems: 'flex-start' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: '#1B2A4A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div key={a.id} style={{
+                      display: 'flex', gap: '14px', padding: '14px 16px',
+                      background: '#F7F8FA', borderRadius: '10px', alignItems: 'flex-start'
+                    }}>
+                      <div style={{
+                        width: '48px', height: '48px', borderRadius: '10px',
+                        background: '#1B2A4A', display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                      }}>
                         <div style={{ fontSize: '9px', color: '#0D7C66', fontWeight: 700 }}>
                           {new Date(a.scheduled_at).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                         </div>
@@ -256,7 +416,9 @@ export default function ProjectCenter() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: '13px', fontWeight: 700, color: '#1B2A4A', marginBottom: '4px' }}>{a.title}</p>
-                        <p style={{ fontSize: '11px', color: '#4A5568', marginBottom: '2px' }}>🕐 {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                        <p style={{ fontSize: '11px', color: '#4A5568', marginBottom: '2px' }}>
+                          🕐 {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </p>
                         <p style={{ fontSize: '11px', color: '#4A5568', marginBottom: '2px' }}>👤 {a.consultant}</p>
                         <p style={{ fontSize: '11px', color: '#4A5568' }}>📍 {a.location}</p>
                       </div>
