@@ -8,6 +8,7 @@ export default function ProjectCenter() {
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [activeTab, setActiveTab] = useState('status')
   const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
 
   useEffect(() => {
     fetch('/api/projects')
@@ -46,6 +47,7 @@ export default function ProjectCenter() {
 
   const handleSave = async (health: string, status: string) => {
     setSaving(true)
+    setSaveMessage(null)
     try {
       const res = await fetch('/api/projects/update', {
         method: 'PATCH',
@@ -61,12 +63,13 @@ export default function ProjectCenter() {
             p.id === selectedProject.id ? { ...p, health, status } : p
           )
         }))
-        alert('✅ Project updated successfully.')
+        setSaveMessage({ type: 'success', text: '✅ Project updated successfully.' })
+        setTimeout(() => setSaveMessage(null), 3000)
       } else {
-        alert('❌ Update failed. Please try again.')
+        setSaveMessage({ type: 'error', text: '❌ Update failed. Please try again.' })
       }
     } catch {
-      alert('❌ Something went wrong. Please try again.')
+      setSaveMessage({ type: 'error', text: '❌ Something went wrong. Please try again.' })
     }
     setSaving(false)
   }
@@ -299,6 +302,20 @@ export default function ProjectCenter() {
                         </select>
                       </div>
                     </div>
+                    {saveMessage && (
+                      <div style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        marginBottom: '10px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        background: saveMessage.type === 'success' ? '#d1fae5' : '#fef2f2',
+                        color: saveMessage.type === 'success' ? '#276749' : '#C53030',
+                        border: `1px solid ${saveMessage.type === 'success' ? '#6ee7b7' : '#fecaca'}`
+                      }}>
+                        {saveMessage.text}
+                      </div>
+                    )}
                     <button
                       onClick={() => {
                         const health = (document.getElementById('health-select') as HTMLSelectElement)?.value
