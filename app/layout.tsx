@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import ChatWidget from '@/components/ChatWidget'
 
 export const metadata: Metadata = {
-  title: 'PS Dashboard',
+  title: 'PS Portal | AssetWorks Professional Services',
   description: 'AssetWorks Professional Services Portal',
 }
 
@@ -21,8 +21,7 @@ export default function RootLayout({
           <main style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '28px 32px',
-            background: '#F7F8FA'
+            background: '#F4F5F6'
           }}>
             {children}
           </main>
