@@ -71,6 +71,17 @@ export default function Dashboard() {
     { initials: 'CN', name: 'Chris Nguyen', role: 'Integration Specialist', email: 'chris.nguyen@assetworks.com' },
   ]
 
+  const cardStyle = (clickable = true) => ({
+    background: '#fff',
+    border: '1px solid #CCCCCC',
+    borderRadius: '8px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(50,62,72,.08)',
+    cursor: clickable ? 'pointer' : 'default',
+    textAlign: 'left' as const,
+    transition: 'box-shadow 0.15s'
+  })
+
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
 
@@ -120,7 +131,7 @@ export default function Dashboard() {
       {/* ── PAGE BODY ── */}
       <div style={{ padding: '24px 28px 60px' }}>
 
-        {/* ── STATUS STRIP ── */}
+        {/* ── STATUS STRIP — all 5 cards clickable ── */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5,1fr)',
@@ -128,12 +139,16 @@ export default function Dashboard() {
           marginBottom: '24px'
         }}>
 
-          {/* Overall Health */}
-          <div style={{
-            background: '#fff', border: '1px solid #CCCCCC',
-            borderRadius: '8px', padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
-          }}>
+          {/* Overall Health → /projects */}
+          <button
+            onClick={() => router.push('/projects')}
+            style={{
+              ...cardStyle(),
+              borderTop: '4px solid #323E48'
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(50,62,72,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(50,62,72,.08)'}
+          >
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '8px' }}>
               Overall Health
             </div>
@@ -141,14 +156,21 @@ export default function Dashboard() {
             <div style={{ fontSize: '12px', color: '#697077', marginTop: '8px', lineHeight: 1.4 }}>
               Next milestone in {data?.milestones?.length || 0} items
             </div>
-          </div>
+            <div style={{ fontSize: '10px', color: '#A50021', marginTop: '6px', fontWeight: 600 }}>
+              View projects →
+            </div>
+          </button>
 
-          {/* Current Phase */}
-          <div style={{
-            background: '#fff', border: '1px solid #CCCCCC',
-            borderRadius: '8px', padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
-          }}>
+          {/* Current Phase → /projects */}
+          <button
+            onClick={() => router.push('/projects')}
+            style={{
+              ...cardStyle(),
+              borderTop: '4px solid #323E48'
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(50,62,72,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(50,62,72,.08)'}
+          >
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
               Current Phase
             </div>
@@ -158,14 +180,21 @@ export default function Dashboard() {
             <div style={{ fontSize: '12px', color: '#697077', marginTop: '3px' }}>
               Phase 3 of 6
             </div>
-          </div>
+            <div style={{ fontSize: '10px', color: '#A50021', marginTop: '6px', fontWeight: 600 }}>
+              View projects →
+            </div>
+          </button>
 
-          {/* Overall Progress */}
-          <div style={{
-            background: '#fff', border: '1px solid #CCCCCC',
-            borderRadius: '8px', padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
-          }}>
+          {/* Overall Progress → /projects */}
+          <button
+            onClick={() => router.push('/projects')}
+            style={{
+              ...cardStyle(),
+              borderTop: '4px solid #323E48'
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(50,62,72,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(50,62,72,.08)'}
+          >
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
               Overall Progress
             </div>
@@ -175,17 +204,28 @@ export default function Dashboard() {
             <div style={{ fontSize: '12px', color: '#697077', marginTop: '2px' }}>
               of subscription complete
             </div>
-          </div>
+            <div style={{ fontSize: '10px', color: '#A50021', marginTop: '6px', fontWeight: 600 }}>
+              View projects →
+            </div>
+          </button>
 
-          {/* Go-Live Target — highlighted */}
-          <div style={{
-            background: '#FBE7EA',
-            border: '2px solid #A50021',
-            borderTop: '5px solid #A50021',
-            borderRadius: '8px',
-            padding: '16px 18px',
-            boxShadow: '0 2px 8px rgba(165,0,33,0.12)'
-          }}>
+          {/* Go-Live Target → /collaboration */}
+          <button
+            onClick={() => router.push('/collaboration')}
+            style={{
+              background: '#FBE7EA',
+              border: '2px solid #A50021',
+              borderTop: '5px solid #A50021',
+              borderRadius: '8px',
+              padding: '16px 18px',
+              boxShadow: '0 2px 8px rgba(165,0,33,0.12)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'box-shadow 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(165,0,33,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(165,0,33,0.12)'}
+          >
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#A50021', fontWeight: 700, marginBottom: '6px' }}>
               🎯 Go-Live Target
             </div>
@@ -197,14 +237,21 @@ export default function Dashboard() {
             <div style={{ fontSize: '12px', color: '#8E1537', marginTop: '3px', fontWeight: 600 }}>
               AiM 12.3 Production Upgrade
             </div>
-          </div>
+            <div style={{ fontSize: '10px', color: '#A50021', marginTop: '6px', fontWeight: 600 }}>
+              View schedule →
+            </div>
+          </button>
 
-          {/* Open Action Items */}
-          <div style={{
-            background: '#fff', border: '1px solid #CCCCCC',
-            borderRadius: '8px', padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
-          }}>
+          {/* Open Action Items → /projects */}
+          <button
+            onClick={() => router.push('/projects')}
+            style={{
+              ...cardStyle(),
+              borderTop: '4px solid #323E48'
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(50,62,72,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(50,62,72,.08)'}
+          >
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
               Open Action Items
             </div>
@@ -216,7 +263,10 @@ export default function Dashboard() {
                 {actionItems.filter((d: any) => d.status === 'in-progress').length} in progress
               </span>
             </div>
-          </div>
+            <div style={{ fontSize: '10px', color: '#A50021', marginTop: '6px', fontWeight: 600 }}>
+              View projects →
+            </div>
+          </button>
 
         </div>
 
@@ -243,7 +293,6 @@ export default function Dashboard() {
                   View full schedule →
                 </button>
               </div>
-
               {phases.map((phase, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
@@ -290,7 +339,6 @@ export default function Dashboard() {
                   View all →
                 </button>
               </div>
-
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr>
@@ -315,10 +363,10 @@ export default function Dashboard() {
                     </tr>
                   ) : actionItems.map((item: any, i: number) => (
                     <tr key={item.id} style={{ background: i % 2 === 0 ? '#fff' : '#F4F5F6' }}>
-                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top', fontSize: '13px', color: '#323E48' }}>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '13px', color: '#323E48' }}>
                         {item.name}
                       </td>
-                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top' }}>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{
                             width: '20px', height: '20px', borderRadius: '50%',
@@ -331,10 +379,10 @@ export default function Dashboard() {
                           <span style={{ fontSize: '12px', color: '#323E48' }}>{item.owner || 'AssetWorks'}</span>
                         </div>
                       </td>
-                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top', fontSize: '12px', color: '#697077' }}>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
                         {item.due_date || 'TBD'}
                       </td>
-                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top' }}>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
                         <span style={{
                           fontSize: '11px', fontWeight: 600, padding: '2px 8px',
                           borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '.3px',
