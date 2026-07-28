@@ -8,8 +8,8 @@ const TOPICS = [
     label: 'Visualize Documentation',
     icon: '📊',
     description: 'Interactive diagrams, system maps, data flows, and visual guides for your AssetWorks environment.',
-    color: '#2E86C1',
-    bg: '#dbeafe',
+    color: '#00538C',
+    bg: '#E9F1F7',
     items: [
       { title: 'AiM System Architecture Diagram', type: 'diagram', updated: 'Jun 10, 2026' },
       { title: 'Work Order Workflow Map', type: 'diagram', updated: 'Jun 3, 2026' },
@@ -23,8 +23,8 @@ const TOPICS = [
     label: 'ETL Guides',
     icon: '🔄',
     description: 'Data migration, transformation, and integration guides for connecting your systems to AiM.',
-    color: '#0D7C66',
-    bg: '#e6f4f1',
+    color: '#2E7D32',
+    bg: '#E7F3E8',
     items: [
       { title: 'Banner ERP to AiM Data Migration Guide', type: 'guide', updated: 'Jun 8, 2026' },
       { title: 'Active Directory Sync Configuration', type: 'guide', updated: 'Jun 1, 2026' },
@@ -38,8 +38,8 @@ const TOPICS = [
     label: 'SOPs & Implementation Resources',
     icon: '📋',
     description: 'Standard operating procedures, implementation checklists, and resources for your institution.',
-    color: '#B7791F',
-    bg: '#fef3c7',
+    color: '#A50021',
+    bg: '#FBE7EA',
     items: [
       { title: 'SOP: Emergency Work Order Escalation v3.1', type: 'sop', updated: 'Jun 3, 2026' },
       { title: 'SOP: New Hire System Onboarding', type: 'sop', updated: 'Mar 22, 2026' },
@@ -65,18 +65,9 @@ export default function KnowledgeBase() {
   }, [])
 
   const currentTopic = TOPICS.find(t => t.id === activeTopic)!
-
   const filteredItems = currentTopic.items.filter(item =>
     item.title.toLowerCase().includes(search.toLowerCase())
   )
-
-  const typeIcon = (type: string) => {
-    if (type === 'diagram') return '🗺️'
-    if (type === 'guide') return '📖'
-    if (type === 'sop') return '📄'
-    if (type === 'checklist') return '✅'
-    return '📄'
-  }
 
   const typeLabel = (type: string) => {
     if (type === 'diagram') return 'Diagram'
@@ -87,118 +78,126 @@ export default function KnowledgeBase() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px' }}>
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'Roboto, sans-serif' }}>
       <div style={{ fontSize: '32px' }}>⏳</div>
-      <p style={{ color: '#4A5568', marginTop: '12px' }}>Loading knowledge base...</p>
+      <p style={{ color: '#697077', marginTop: '12px' }}>Loading knowledge base...</p>
     </div>
   )
 
   return (
-    <div style={{ maxWidth: '960px' }}>
+    <div style={{ fontFamily: 'Roboto, sans-serif' }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B2A4A', marginBottom: '4px' }}>
-          📚 Knowledge Base
-        </h1>
-        <p style={{ fontSize: '13px', color: '#4A5568' }}>
-          Documentation, ETL guides, SOPs, and implementation resources
-        </p>
-      </div>
-
-      {/* Search bar */}
-      <div style={{ marginBottom: '24px', position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px' }}>
-          🔍
-        </span>
-        <input
-          type="text"
-          placeholder="Search knowledge base..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px 12px 42px',
-            fontSize: '13px',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            background: '#ffffff',
-            color: '#1B2A4A',
-            outline: 'none',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-          }}
-        />
-      </div>
-
-      {/* Topic selector cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '28px' }}>
-        {TOPICS.map(topic => (
-          <button
-            key={topic.id}
-            onClick={() => { setActiveTopic(topic.id); setSearch(''); setOpenArticle(null) }}
-            style={{
-              textAlign: 'left',
-              background: activeTopic === topic.id ? topic.bg : '#ffffff',
-              border: `2px solid ${activeTopic === topic.id ? topic.color : '#E2E8F0'}`,
-              borderRadius: '12px',
-              padding: '18px',
-              cursor: 'pointer',
-              transition: 'all 0.15s'
-            }}
-          >
-            <div style={{ fontSize: '28px', marginBottom: '10px' }}>{topic.icon}</div>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#1B2A4A', marginBottom: '6px', lineHeight: 1.4 }}>
-              {topic.label}
-            </h3>
-            <p style={{ fontSize: '11px', color: '#4A5568', lineHeight: 1.6, marginBottom: '10px' }}>
-              {topic.description}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: topic.color }}>
-                {topic.items.length} resources
-              </span>
-              {activeTopic === topic.id && (
-                <span style={{ fontSize: '9px', background: topic.color, color: '#fff', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                  ACTIVE
-                </span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Active topic content */}
-      <div style={{ background: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-
-        {/* Topic header */}
-        <div style={{
-          padding: '16px 22px',
-          background: currentTopic.bg,
-          borderBottom: `2px solid ${currentTopic.color}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <span style={{ fontSize: '24px' }}>{currentTopic.icon}</span>
-          <div>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#1B2A4A', marginBottom: '2px' }}>
-              {currentTopic.label}
-            </h2>
-            <p style={{ fontSize: '11px', color: '#4A5568' }}>
-              {filteredItems.length} {filteredItems.length === 1 ? 'resource' : 'resources'} found
-            </p>
+      {/* Top bar */}
+      <div style={{
+        background: '#ffffff',
+        borderBottom: '4px solid #A50021',
+        padding: '14px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div>
+          <div style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '16px', color: '#323E48' }}>
+            Knowledge Base
           </div>
+          <div style={{ fontSize: '12px', color: '#697077' }}>
+            Documentation · ETL guides · SOPs · Implementation resources
+          </div>
+        </div>
+        {/* Search */}
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px' }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Search knowledge base..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              padding: '8px 14px 8px 36px', fontSize: '12px',
+              border: '1px solid #CCCCCC', borderRadius: '6px',
+              color: '#323E48', outline: 'none', width: '240px',
+              background: '#ffffff'
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ padding: '24px 28px 60px' }}>
+
+        {/* Topic selector */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
+          {TOPICS.map(topic => (
+            <button
+              key={topic.id}
+              onClick={() => { setActiveTopic(topic.id); setSearch(''); setOpenArticle(null) }}
+              style={{
+                textAlign: 'left', cursor: 'pointer',
+                background: activeTopic === topic.id ? topic.bg : '#ffffff',
+                border: activeTopic === topic.id ? `2px solid ${topic.color}` : '1px solid #CCCCCC',
+                borderTop: activeTopic === topic.id ? `5px solid ${topic.color}` : '4px solid #CCCCCC',
+                borderRadius: '8px', padding: '18px 20px',
+                boxShadow: activeTopic === topic.id ? `0 2px 8px ${topic.color}22` : '0 1px 3px rgba(50,62,72,.08)',
+                transition: 'all 0.15s'
+              }}
+            >
+              <div style={{ fontSize: '28px', marginBottom: '10px' }}>{topic.icon}</div>
+              <h3 style={{
+                fontFamily: 'Oswald, sans-serif', fontSize: '14px', fontWeight: 700,
+                color: activeTopic === topic.id ? topic.color : '#323E48',
+                marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.3px'
+              }}>
+                {topic.label}
+              </h3>
+              <p style={{ fontSize: '11px', color: '#697077', lineHeight: 1.6, marginBottom: '10px' }}>
+                {topic.description}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: topic.color, fontFamily: 'Oswald, sans-serif' }}>
+                  {topic.items.length} resources
+                </span>
+                {activeTopic === topic.id && (
+                  <span style={{
+                    fontSize: '9px', background: topic.color, color: '#fff',
+                    padding: '2px 8px', borderRadius: '3px', fontWeight: 700,
+                    fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
+                  }}>
+                    Active
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
         </div>
 
         {/* Resource list */}
-        <div style={{ padding: '8px 0' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #CCCCCC', borderRadius: '8px', boxShadow: '0 1px 3px rgba(50,62,72,.08)', overflow: 'hidden' }}>
+
+          {/* Section header */}
+          <div style={{
+            padding: '14px 22px',
+            background: currentTopic.bg,
+            borderBottom: `3px solid ${currentTopic.color}`,
+            display: 'flex', alignItems: 'center', gap: '12px'
+          }}>
+            <span style={{ fontSize: '22px' }}>{currentTopic.icon}</span>
+            <div>
+              <h2 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', fontWeight: 700, color: '#323E48', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px' }}>
+                {currentTopic.label}
+              </h2>
+              <p style={{ fontSize: '11px', color: '#697077' }}>
+                {filteredItems.length} {filteredItems.length === 1 ? 'resource' : 'resources'} found
+              </p>
+            </div>
+          </div>
+
+          {/* Items */}
           {filteredItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ textAlign: 'center', padding: '48px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
-              <p style={{ fontSize: '13px', color: '#4A5568' }}>No results found for "{search}"</p>
+              <p style={{ fontSize: '13px', color: '#697077' }}>No results for "{search}"</p>
               <button
                 onClick={() => setSearch('')}
-                style={{ marginTop: '12px', padding: '8px 16px', background: '#1B2A4A', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ marginTop: '12px', padding: '8px 16px', background: '#323E48', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}
               >
                 Clear search
               </button>
@@ -208,114 +207,60 @@ export default function KnowledgeBase() {
               <button
                 onClick={() => setOpenArticle(openArticle === `${activeTopic}-${i}` ? null : `${activeTopic}-${i}`)}
                 style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: '1px solid #F7F8FA',
-                  padding: '14px 22px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
+                  width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                  borderBottom: '1px solid #EAECEE', padding: '14px 22px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '14px',
                   transition: 'background 0.15s'
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#F7F8FA'}
+                onMouseEnter={e => e.currentTarget.style.background = '#F4F5F6'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
-                {/* Type icon */}
                 <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '8px',
-                  background: currentTopic.bg,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  flexShrink: 0
+                  width: '36px', height: '36px', borderRadius: '6px',
+                  background: currentTopic.bg, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '9px', fontWeight: 700,
+                  color: currentTopic.color, flexShrink: 0, fontFamily: 'Oswald, sans-serif',
+                  textTransform: 'uppercase'
                 }}>
-                  {typeIcon(item.type)}
+                  {typeLabel(item.type).substring(0, 3)}
                 </div>
-
-                {/* Item info */}
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#1B2A4A', marginBottom: '3px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '3px' }}>
                     {item.title}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{
-                      fontSize: '9px',
-                      padding: '2px 7px',
-                      borderRadius: '4px',
-                      fontWeight: 700,
-                      background: currentTopic.bg,
-                      color: currentTopic.color
+                      fontSize: '9px', padding: '2px 7px', borderRadius: '3px',
+                      fontWeight: 700, background: currentTopic.bg,
+                      color: currentTopic.color, fontFamily: 'Oswald, sans-serif',
+                      textTransform: 'uppercase'
                     }}>
-                      {typeLabel(item.type).toUpperCase()}
+                      {typeLabel(item.type)}
                     </span>
-                    <span style={{ fontSize: '10px', color: '#94a3b8' }}>
-                      Updated {item.updated}
-                    </span>
+                    <span style={{ fontSize: '10px', color: '#8a9199' }}>Updated {item.updated}</span>
                   </div>
                 </div>
-
-                {/* Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '11px', color: currentTopic.color, fontWeight: 600 }}>
-                    View
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#4A5568' }}>
+                  <span style={{ fontSize: '11px', color: currentTopic.color, fontWeight: 600 }}>View</span>
+                  <span style={{ fontSize: '12px', color: '#8a9199' }}>
                     {openArticle === `${activeTopic}-${i}` ? '▲' : '▼'}
                   </span>
                 </div>
               </button>
 
-              {/* Expanded article preview */}
               {openArticle === `${activeTopic}-${i}` && (
-                <div style={{
-                  padding: '16px 22px 16px 76px',
-                  background: '#F7F8FA',
-                  borderBottom: '1px solid #E2E8F0'
-                }}>
-                  <p style={{ fontSize: '12px', color: '#4A5568', lineHeight: 1.7, marginBottom: '12px' }}>
+                <div style={{ padding: '16px 22px 16px 72px', background: '#F4F5F6', borderBottom: '1px solid #CCCCCC' }}>
+                  <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, marginBottom: '12px' }}>
                     This {typeLabel(item.type).toLowerCase()} covers key procedures and best practices for Lakewood State University's AssetWorks environment. Last reviewed by the PS team on {item.updated}.
                   </p>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button style={{
-                      padding: '7px 16px',
-                      background: currentTopic.color,
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}>
-                      📄 Open Document
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '7px 16px', background: currentTopic.color, color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                      Open Document
                     </button>
-                    <button style={{
-                      padding: '7px 16px',
-                      background: '#ffffff',
-                      color: '#4A5568',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}>
+                    <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                       ⬇️ Download
                     </button>
-                    <button style={{
-                      padding: '7px 16px',
-                      background: '#ffffff',
-                      color: '#4A5568',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}>
+                    <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                       🔗 Share Link
                     </button>
                   </div>
@@ -323,64 +268,27 @@ export default function KnowledgeBase() {
               )}
             </div>
           ))}
-        </div>
 
-        {/* Footer */}
-        <div style={{
-          padding: '14px 22px',
-          borderTop: '1px solid #F7F8FA',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <p style={{ fontSize: '11px', color: '#94a3b8' }}>
-            All resources maintained by your AssetWorks PS team
-          </p>
-          <button style={{
-            padding: '7px 16px',
-            background: '#1B2A4A',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer'
+          {/* Footer */}
+          <div style={{
+            padding: '14px 22px', borderTop: '1px solid #EAECEE',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
           }}>
-            + Request a Resource
-          </button>
-        </div>
-      </div>
-
-      {/* DB articles section */}
-      {data?.articles && data.articles.length > 0 && (
-        <div style={{ marginTop: '24px' }}>
-          <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#1B2A4A', marginBottom: '14px' }}>
-            📰 Recently Added
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '12px' }}>
-            {data.articles.slice(0, 4).map((a: any) => (
-              <div key={a.id} style={{
-                background: '#ffffff',
-                borderRadius: '10px',
-                padding: '14px 16px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                borderLeft: '3px solid #0D7C66'
-              }}>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: '#1B2A4A', marginBottom: '4px' }}>
-                  {a.title}
-                </p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '9px', background: '#e6f4f1', color: '#0D7C66', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                    {a.type?.toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#94a3b8' }}>By {a.author}</span>
-                </div>
-              </div>
-            ))}
+            <p style={{ fontSize: '11px', color: '#8a9199' }}>
+              All resources maintained by your AssetWorks PS team
+            </p>
+            <button style={{
+              padding: '7px 16px', background: '#323E48', color: '#fff',
+              border: 'none', borderRadius: '6px', fontSize: '11px',
+              fontFamily: 'Oswald, sans-serif', fontWeight: 700,
+              textTransform: 'uppercase', cursor: 'pointer'
+            }}>
+              + Request a Resource
+            </button>
           </div>
         </div>
-      )}
 
+      </div>
     </div>
   )
 }
