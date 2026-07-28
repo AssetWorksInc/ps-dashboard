@@ -111,16 +111,16 @@ export default function TrainingLearning() {
 
       <div style={{ padding: '24px 28px 60px' }}>
 
-        {/* KPI strip */}
+        {/* KPI strip — all maroon */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
           {[
-            { label: 'Recorded Sessions', value: data?.sessions?.length || 0, icon: '🎬', color: '#A50021' },
-            { label: 'Training Materials', value: data?.materials?.length || 0, icon: '📁', color: '#323E48' },
-            { label: 'Best Practice Guides', value: BEST_PRACTICES.length, icon: '⭐', color: '#2E7D32' },
+            { label: 'Recorded Sessions', value: data?.sessions?.length || 0, icon: '🎬' },
+            { label: 'Training Materials', value: data?.materials?.length || 0, icon: '📁' },
+            { label: 'Best Practice Guides', value: BEST_PRACTICES.length, icon: '⭐' },
           ].map((k, i) => (
             <div key={i} style={{
               background: '#ffffff', border: '1px solid #CCCCCC',
-              borderTop: `4px solid ${k.color}`,
+              borderTop: '4px solid #A50021',
               borderRadius: '8px', padding: '16px 18px',
               boxShadow: '0 1px 3px rgba(50,62,72,.08)'
             }}>
@@ -136,7 +136,14 @@ export default function TrainingLearning() {
         </div>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #CCCCCC', marginBottom: '20px', background: '#ffffff', borderRadius: '8px 8px 0 0', overflow: 'hidden' }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid #CCCCCC',
+          marginBottom: '20px',
+          background: '#ffffff',
+          borderRadius: '8px 8px 0 0',
+          overflow: 'hidden'
+        }}>
           {tabs.map(t => (
             <button
               key={t.id}
@@ -167,20 +174,25 @@ export default function TrainingLearning() {
               </div>
             ) : filteredSessions.map((s: any) => (
               <div key={s.id} style={{
-                background: '#ffffff', border: '1px solid #CCCCCC',
-                borderRadius: '8px', boxShadow: '0 1px 3px rgba(50,62,72,.08)',
+                background: '#ffffff',
+                border: '1px solid #CCCCCC',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px rgba(50,62,72,.08)',
                 overflow: 'hidden',
                 borderLeft: playingVideo === s.id ? '4px solid #A50021' : '4px solid transparent'
               }}>
-                {/* Video header */}
                 <button
                   onClick={() => setPlayingVideo(playingVideo === s.id ? null : s.id)}
                   style={{
                     width: '100%',
-                    background: playingVideo === s.id ? '#323E48' : '#1F3864',
-                    border: 'none', padding: '22px',
-                    cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', gap: '16px', textAlign: 'left'
+                    background: '#1F3864',
+                    border: 'none',
+                    padding: '22px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    textAlign: 'left'
                   }}
                 >
                   <div style={{
@@ -217,12 +229,15 @@ export default function TrainingLearning() {
                       </span>
                     </div>
                   </div>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600, flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
+                  <span style={{
+                    fontSize: '11px', color: 'rgba(255,255,255,0.7)',
+                    fontWeight: 600, flexShrink: 0,
+                    fontFamily: 'Oswald, sans-serif'
+                  }}>
                     {playingVideo === s.id ? 'Close ✕' : 'Watch →'}
                   </span>
                 </button>
 
-                {/* Expanded content */}
                 {playingVideo === s.id && (
                   <div style={{ padding: '18px 22px', borderTop: '1px solid #EAECEE' }}>
                     <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, marginBottom: '16px' }}>
@@ -234,16 +249,31 @@ export default function TrainingLearning() {
                       marginBottom: '16px', flexDirection: 'column', gap: '8px'
                     }}>
                       <div style={{ fontSize: '36px' }}>🎬</div>
-                      <p style={{ fontSize: '12px', color: '#64748b' }}>Video player — connect your video hosting URL</p>
+                      <p style={{ fontSize: '12px', color: '#64748b' }}>
+                        Video player — connect your video hosting URL
+                      </p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button style={{ padding: '7px 16px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                      <button style={{
+                        padding: '7px 16px', background: '#A50021', color: '#fff',
+                        border: 'none', borderRadius: '5px', fontSize: '11px',
+                        fontWeight: 700, cursor: 'pointer',
+                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
+                      }}>
                         ▶ Play Session
                       </button>
-                      <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                      <button style={{
+                        padding: '7px 16px', background: '#ffffff', color: '#323E48',
+                        border: '1px solid #CCCCCC', borderRadius: '5px',
+                        fontSize: '11px', fontWeight: 600, cursor: 'pointer'
+                      }}>
                         ⬇️ Download
                       </button>
-                      <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                      <button style={{
+                        padding: '7px 16px', background: '#ffffff', color: '#323E48',
+                        border: '1px solid #CCCCCC', borderRadius: '5px',
+                        fontSize: '11px', fontWeight: 600, cursor: 'pointer'
+                      }}>
                         🔗 Share
                       </button>
                     </div>
@@ -256,7 +286,11 @@ export default function TrainingLearning() {
 
         {/* TRAINING MATERIALS */}
         {activeTab === 'materials' && (
-          <div style={{ background: '#ffffff', border: '1px solid #CCCCCC', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(50,62,72,.08)' }}>
+          <div style={{
+            background: '#ffffff', border: '1px solid #CCCCCC',
+            borderRadius: '8px', overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
+          }}>
             <div style={{ padding: '12px 16px', background: '#323E48', borderBottom: '1px solid #CCCCCC' }}>
               <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Training Materials — {filteredMaterials.length} items
@@ -305,10 +339,19 @@ export default function TrainingLearning() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                  <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                  <button style={{
+                    padding: '6px 14px', background: '#A50021', color: '#fff',
+                    border: 'none', borderRadius: '5px', fontSize: '11px',
+                    fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
+                  }}>
                     Open
                   </button>
-                  <button style={{ padding: '6px 12px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                  <button style={{
+                    padding: '6px 12px', background: '#ffffff', color: '#323E48',
+                    border: '1px solid #CCCCCC', borderRadius: '5px',
+                    fontSize: '11px', fontWeight: 600, cursor: 'pointer'
+                  }}>
                     ⬇️
                   </button>
                 </div>
