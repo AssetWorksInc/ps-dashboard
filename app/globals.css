@@ -4,10 +4,8 @@
   --aw-maroon:       #A50021;
   --aw-slate:        #323E48;
   --aw-white:        #FFFFFF;
-  --aw-black:        #000000;
   --aw-blue:         #00538C;
   --aw-deep-maroon:  #8E1537;
-  --aw-orange:       #ED7D31;
   --aw-navy:         #1F3864;
   --aw-border:       #CCCCCC;
   --aw-panel:        #EAECEE;
@@ -39,10 +37,7 @@ h1, h2, h3, h4 {
 a { color: var(--aw-blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.shell {
-  display: flex;
-  min-height: 100vh;
-}
+.shell { display: flex; min-height: 100vh; }
 
 .main-content {
   flex: 1;
