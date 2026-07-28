@@ -8,8 +8,8 @@ const TOPICS = [
     label: 'Visualize Documentation',
     icon: '📊',
     description: 'Interactive diagrams, system maps, data flows, and visual guides for your AssetWorks environment.',
-    color: '#00538C',
-    bg: '#E9F1F7',
+    color: '#A50021',
+    bg: '#FBE7EA',
     items: [
       { title: 'AiM System Architecture Diagram', type: 'diagram', updated: 'Jun 10, 2026' },
       { title: 'Work Order Workflow Map', type: 'diagram', updated: 'Jun 3, 2026' },
@@ -23,8 +23,8 @@ const TOPICS = [
     label: 'ETL Guides',
     icon: '🔄',
     description: 'Data migration, transformation, and integration guides for connecting your systems to AiM.',
-    color: '#2E7D32',
-    bg: '#E7F3E8',
+    color: '#A50021',
+    bg: '#FBE7EA',
     items: [
       { title: 'Banner ERP to AiM Data Migration Guide', type: 'guide', updated: 'Jun 8, 2026' },
       { title: 'Active Directory Sync Configuration', type: 'guide', updated: 'Jun 1, 2026' },
@@ -104,7 +104,6 @@ export default function KnowledgeBase() {
             Documentation · ETL guides · SOPs · Implementation resources
           </div>
         </div>
-        {/* Search */}
         <div style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px' }}>🔍</span>
           <input
@@ -170,7 +169,11 @@ export default function KnowledgeBase() {
         </div>
 
         {/* Resource list */}
-        <div style={{ background: '#ffffff', border: '1px solid #CCCCCC', borderRadius: '8px', boxShadow: '0 1px 3px rgba(50,62,72,.08)', overflow: 'hidden' }}>
+        <div style={{
+          background: '#ffffff', border: '1px solid #CCCCCC',
+          borderRadius: '8px', boxShadow: '0 1px 3px rgba(50,62,72,.08)',
+          overflow: 'hidden'
+        }}>
 
           {/* Section header */}
           <div style={{
@@ -181,7 +184,10 @@ export default function KnowledgeBase() {
           }}>
             <span style={{ fontSize: '22px' }}>{currentTopic.icon}</span>
             <div>
-              <h2 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', fontWeight: 700, color: '#323E48', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px' }}>
+              <h2 style={{
+                fontFamily: 'Oswald, sans-serif', fontSize: '14px', fontWeight: 700,
+                color: '#323E48', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px'
+              }}>
                 {currentTopic.label}
               </h2>
               <p style={{ fontSize: '11px', color: '#697077' }}>
@@ -197,7 +203,11 @@ export default function KnowledgeBase() {
               <p style={{ fontSize: '13px', color: '#697077' }}>No results for "{search}"</p>
               <button
                 onClick={() => setSearch('')}
-                style={{ marginTop: '12px', padding: '8px 16px', background: '#323E48', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                style={{
+                  marginTop: '12px', padding: '8px 16px', background: '#323E48',
+                  color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px',
+                  fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald, sans-serif'
+                }}
               >
                 Clear search
               </button>
@@ -249,18 +259,34 @@ export default function KnowledgeBase() {
               </button>
 
               {openArticle === `${activeTopic}-${i}` && (
-                <div style={{ padding: '16px 22px 16px 72px', background: '#F4F5F6', borderBottom: '1px solid #CCCCCC' }}>
+                <div style={{
+                  padding: '16px 22px 16px 72px',
+                  background: '#F4F5F6',
+                  borderBottom: '1px solid #CCCCCC'
+                }}>
                   <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, marginBottom: '12px' }}>
                     This {typeLabel(item.type).toLowerCase()} covers key procedures and best practices for Lakewood State University's AssetWorks environment. Last reviewed by the PS team on {item.updated}.
                   </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ padding: '7px 16px', background: currentTopic.color, color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                    <button style={{
+                      padding: '7px 16px', background: currentTopic.color, color: '#fff',
+                      border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
+                    }}>
                       Open Document
                     </button>
-                    <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button style={{
+                      padding: '7px 16px', background: '#ffffff', color: '#323E48',
+                      border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px',
+                      fontWeight: 600, cursor: 'pointer'
+                    }}>
                       ⬇️ Download
                     </button>
-                    <button style={{ padding: '7px 16px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button style={{
+                      padding: '7px 16px', background: '#ffffff', color: '#323E48',
+                      border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px',
+                      fontWeight: 600, cursor: 'pointer'
+                    }}>
                       🔗 Share Link
                     </button>
                   </div>
