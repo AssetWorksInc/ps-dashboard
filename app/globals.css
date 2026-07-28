@@ -1,34 +1,43 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
 
 :root {
-  --navy: #1B2A4A;
-  --teal: #0D7C66;
-  --teal-lt: #e6f4f1;
-  --blue: #2E86C1;
-  --slate: #4A5568;
-  --ltgray: #F7F8FA;
-  --midgray: #E2E8F0;
-  --dkgray: #2D3748;
-  --green: #276749;
-  --gold: #B7791F;
-  --red: #C53030;
-  --white: #ffffff;
+  --aw-maroon:       #A50021;
+  --aw-slate:        #323E48;
+  --aw-white:        #FFFFFF;
+  --aw-black:        #000000;
+  --aw-blue:         #00538C;
+  --aw-deep-maroon:  #8E1537;
+  --aw-orange:       #ED7D31;
+  --aw-navy:         #1F3864;
+  --aw-border:       #CCCCCC;
+  --aw-panel:        #EAECEE;
+  --aw-bg:           #F4F5F6;
+  --aw-status-green: #2E7D32;
+  --aw-status-amber: #F2A900;
+  --aw-status-red:   #A50021;
+  --aw-font-head:    'Oswald', 'Arial Narrow', sans-serif;
+  --aw-font-body:    'Roboto', 'Segoe UI', Arial, sans-serif;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: var(--ltgray);
-  color: var(--dkgray);
-  font-size: 14px;
+  font-family: var(--aw-font-body);
+  color: var(--aw-slate);
+  background: var(--aw-bg);
+  line-height: 1.45;
 }
+
+h1, h2, h3, h4 {
+  font-family: var(--aw-font-head);
+  font-weight: 700;
+  color: var(--aw-slate);
+  letter-spacing: .2px;
+  margin: 0 0 .4em 0;
+}
+
+a { color: var(--aw-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
 
 .shell {
   display: flex;
@@ -38,5 +47,5 @@ body {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 32px;
+  background: var(--aw-bg);
 }
