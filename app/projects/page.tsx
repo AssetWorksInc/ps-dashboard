@@ -261,8 +261,6 @@ export default function ProjectCenter() {
                     <p style={{ fontSize: '13px', color: '#697077', lineHeight: 1.7, marginBottom: '20px' }}>
                       {selectedProject.description || 'No description available.'}
                     </p>
-
-                    {/* Stat boxes */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
                       {[
                         { label: 'Status', value: selectedProject.status || 'Active' },
@@ -275,8 +273,6 @@ export default function ProjectCenter() {
                         </div>
                       ))}
                     </div>
-
-                    {/* Deliverable summary */}
                     <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '10px' }}>
                       Deliverable Summary
                     </h3>
@@ -290,8 +286,6 @@ export default function ProjectCenter() {
                         </div>
                       ))}
                     </div>
-
-                    {/* Update panel */}
                     <div style={{ background: '#F4F5F6', borderRadius: '8px', padding: '16px 18px', border: '1px solid #CCCCCC' }}>
                       <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, color: '#323E48', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '12px' }}>
                         ✏️ Update Project
