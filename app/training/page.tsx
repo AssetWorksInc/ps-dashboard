@@ -111,7 +111,7 @@ export default function TrainingLearning() {
 
       <div style={{ padding: '24px 28px 60px' }}>
 
-        {/* KPI strip — all maroon */}
+        {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
           {[
             { label: 'Recorded Sessions', value: data?.sessions?.length || 0, icon: '🎬' },
@@ -119,13 +119,18 @@ export default function TrainingLearning() {
             { label: 'Best Practice Guides', value: BEST_PRACTICES.length, icon: '⭐' },
           ].map((k, i) => (
             <div key={i} style={{
-              background: '#ffffff', border: '1px solid #CCCCCC',
+              background: '#ffffff',
+              border: '1px solid #CCCCCC',
               borderTop: '4px solid #A50021',
-              borderRadius: '8px', padding: '16px 18px',
+              borderRadius: '8px',
+              padding: '16px 18px',
               boxShadow: '0 1px 3px rgba(50,62,72,.08)'
             }}>
               <div style={{ fontSize: '20px', marginBottom: '6px' }}>{k.icon}</div>
-              <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '4px' }}>
+              <div style={{
+                fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase',
+                letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '4px'
+              }}>
                 {k.label}
               </div>
               <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '28px', fontWeight: 700, color: '#323E48' }}>
@@ -168,18 +173,20 @@ export default function TrainingLearning() {
         {activeTab === 'sessions' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {filteredSessions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', background: '#ffffff', borderRadius: '8px', border: '1px solid #CCCCCC' }}>
+              <div style={{
+                textAlign: 'center', padding: '60px', background: '#ffffff',
+                borderRadius: '8px', border: '1px solid #CCCCCC'
+              }}>
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>🎬</div>
                 <p style={{ fontSize: '13px', color: '#697077' }}>No sessions found.</p>
               </div>
             ) : filteredSessions.map((s: any) => (
               <div key={s.id} style={{
                 background: '#ffffff',
-                border: '1px solid #CCCCCC',
+                border: '2px solid #A50021',
                 borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-                overflow: 'hidden',
-                borderLeft: playingVideo === s.id ? '4px solid #A50021' : '4px solid transparent'
+                boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
+                overflow: 'hidden'
               }}>
                 <button
                   onClick={() => setPlayingVideo(playingVideo === s.id ? null : s.id)}
@@ -287,12 +294,22 @@ export default function TrainingLearning() {
         {/* TRAINING MATERIALS */}
         {activeTab === 'materials' && (
           <div style={{
-            background: '#ffffff', border: '1px solid #CCCCCC',
-            borderRadius: '8px', overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
+            background: '#ffffff',
+            border: '2px solid #A50021',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(165,0,33,0.10)'
           }}>
-            <div style={{ padding: '12px 16px', background: '#323E48', borderBottom: '1px solid #CCCCCC' }}>
-              <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div style={{
+              padding: '12px 16px',
+              background: '#A50021',
+              borderBottom: '1px solid #8E1537'
+            }}>
+              <p style={{
+                fontFamily: 'Oswald, sans-serif', fontSize: '11px',
+                fontWeight: 600, color: '#ffffff',
+                textTransform: 'uppercase', letterSpacing: '1px'
+              }}>
                 Training Materials — {filteredMaterials.length} items
               </p>
             </div>
@@ -310,7 +327,7 @@ export default function TrainingLearning() {
               }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '6px',
-                  background: '#EAECEE', color: '#A50021',
+                  background: '#FBE7EA', color: '#A50021',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '9px', fontWeight: 700, flexShrink: 0,
                   fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
@@ -367,11 +384,15 @@ export default function TrainingLearning() {
               g.title.toLowerCase().includes(search.toLowerCase())
             ).map((guide, i) => (
               <div key={i} style={{
-                background: '#ffffff', border: '1px solid #CCCCCC',
-                borderTop: '4px solid #A50021',
-                borderRadius: '8px', padding: '20px',
-                boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-                display: 'flex', flexDirection: 'column', gap: '10px'
+                background: '#ffffff',
+                border: '2px solid #A50021',
+                borderTop: '5px solid #A50021',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: '0 2px 8px rgba(165,0,33,0.12)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
               }}>
                 <div style={{ fontSize: '28px' }}>{guide.icon}</div>
                 <span style={{
