@@ -32,7 +32,6 @@ export default function ProjectCenter() {
   const hBg = (h: string) => h === 'green' ? '#E7F3E8' : h === 'amber' ? '#FDF3DC' : '#FBE7EA'
   const hDot = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#F2A900' : '#A50021'
   const hLabel = (h: string) => h === 'green' ? 'On Track' : h === 'amber' ? 'At Risk' : 'Critical'
-
   const sColor = (s: string) => s === 'done' ? '#2E7D32' : s === 'in-progress' ? '#A50021' : s === 'scheduled' ? '#00538C' : '#8a6400'
   const sBg = (s: string) => s === 'done' ? '#E7F3E8' : s === 'in-progress' ? '#FBE7EA' : s === 'scheduled' ? '#E9F1F7' : '#FDF3DC'
 
@@ -165,14 +164,16 @@ export default function ProjectCenter() {
                 key={p.id}
                 onClick={() => { setSelectedProject(p); setActiveTab('status') }}
                 style={{
-                  width: '100%', textAlign: 'left', background: 'none',
+                  width: '100%',
+                  textAlign: 'left',
                   border: 'none',
                   borderLeft: `4px solid ${selectedProject?.id === p.id ? '#A50021' : 'transparent'}`,
                   borderBottom: '1px solid #EAECEE',
-                  padding: '14px 16px', cursor: 'pointer',
+                  padding: '14px 16px',
+                  cursor: 'pointer',
                   background: selectedProject?.id === p.id ? '#FBE7EA' : '#ffffff',
                   transition: 'all 0.15s'
-                } as any}
+                }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#323E48', lineHeight: 1.4, paddingRight: '6px' }}>
