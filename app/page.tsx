@@ -7,8 +7,7 @@ export default function Dashboard() {
   const router = useRouter()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [openAnnouncement, setOpenAnnouncement] = useState<string | null>(null)
-  const [openAppointment, setOpenAppointment] = useState<string | null>(null)
+  const [openAppt, setOpenAppt] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/dashboard')
@@ -24,78 +23,58 @@ export default function Dashboard() {
     </div>
   )
 
-  const hColor = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#8a6400' : '#A50021'
-  const hBg = (h: string) => h === 'green' ? '#E7F3E8' : h === 'amber' ? '#FDF3DC' : '#FBE7EA'
-  const hLabel = (h: string) => h === 'green' ? 'On Track' : h === 'amber' ? 'At Risk' : 'Critical'
-  const hDot = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#F2A900' : '#A50021'
-
   const firstProject = data?.projects?.[0]
   const health = firstProject?.health || 'green'
   const pct = firstProject?.pct_complete || 0
 
-  const pill = (h: string, label: string) => (
+  const hColor = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#8a6400' : '#A50021'
+  const hBg = (h: string) => h === 'green' ? '#E7F3E8' : h === 'amber' ? '#FDF3DC' : '#FBE7EA'
+  const hDot = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#F2A900' : '#A50021'
+  const hLabel = (h: string) => h === 'green' ? 'On Track' : h === 'amber' ? 'At Risk' : 'Critical'
+
+  const pill = (h: string) => (
     <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '5px',
-      fontSize: '11px',
-      fontWeight: 600,
-      padding: '3px 10px',
-      borderRadius: '999px',
-      fontFamily: 'Oswald, sans-serif',
-      textTransform: 'uppercase' as const,
-      letterSpacing: '.4px',
-      background: hBg(h),
-      color: hColor(h)
+      display: 'inline-flex', alignItems: 'center', gap: '6px',
+      fontSize: '11px', fontWeight: 600, padding: '3px 10px',
+      borderRadius: '999px', fontFamily: 'Oswald, sans-serif',
+      textTransform: 'uppercase' as const, letterSpacing: '.4px',
+      background: hBg(h), color: hColor(h)
     }}>
       <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: hDot(h), display: 'inline-block' }} />
-      {label}
+      {hLabel(h)}
     </span>
   )
 
-  const card = (children: React.ReactNode, mb = '20px') => (
-    <div style={{
-      background: '#ffffff',
-      border: '1px solid #CCCCCC',
-      borderRadius: '8px',
-      padding: '20px 22px',
-      boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-      marginBottom: mb
-    }}>
-      {children}
-    </div>
-  )
+  const phases = data?.projects?.length > 0 ? [
+    { name: 'Onboarding & Discovery', dates: 'Jan 15 – Feb 28, 2026', pct: 100, status: 'done' },
+    { name: 'System Configuration', dates: 'Mar 1 – Apr 30, 2026', pct: 100, status: 'done' },
+    { name: 'PS Subscription — Year 1', dates: 'May 1 – Aug 31, 2026', pct: pct, status: 'active' },
+    { name: 'AiM 12.x Upgrade', dates: 'Mar 1 – Jul 25, 2026', pct: data?.projects?.[1]?.pct_complete || 68, status: 'active' },
+    { name: 'Training & Enablement', dates: 'Jul 10 – Aug 15, 2026', pct: 0, status: 'upcoming' },
+    { name: 'Go-Live & Hypercare', dates: 'Aug 15 – Sep 30, 2026', pct: 0, status: 'upcoming' },
+  ] : []
 
-  const cardHead = (title: string, action?: () => void, actionLabel = 'View all →') => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-      <h3 style={{
-        fontFamily: 'Oswald, sans-serif',
-        fontSize: '14px',
-        textTransform: 'uppercase',
-        letterSpacing: '.5px',
-        color: '#A50021',
-        margin: 0
-      }}>
-        {title}
-      </h3>
-      {action && (
-        <button
-          onClick={action}
-          style={{
-            background: 'none', border: 'none', fontSize: '12px',
-            color: '#00538C', cursor: 'pointer', fontFamily: 'Roboto, sans-serif'
-          }}
-        >
-          {actionLabel}
-        </button>
-      )}
-    </div>
-  )
+  const actionItems = data?.deliverables?.filter((d: any) =>
+    d.status === 'scheduled' || d.status === 'in-progress'
+  )?.slice(0, 5) || []
+
+  const documents = [
+    { icon: 'PDF', name: 'PS Subscription Statement of Work', sub: 'Updated Jan 15, 2026' },
+    { icon: 'XLS', name: 'Deliverables Tracker — H1 2026', sub: 'Updated Jun 5, 2026' },
+    { icon: 'PPT', name: 'Q2 Business Review Deck', sub: 'Updated Apr 8, 2026' },
+    { icon: 'DOC', name: 'AiM 12.3 Upgrade Readiness Checklist', sub: 'Updated Jun 5, 2026' },
+  ]
+
+  const team = [
+    { initials: 'AR', name: 'Amanda Rivera', role: 'Dedicated CSM', email: 'amanda.rivera@assetworks.com' },
+    { initials: 'JT', name: 'James Thornton', role: 'Senior Consultant', email: 'james.thornton@assetworks.com' },
+    { initials: 'CN', name: 'Chris Nguyen', role: 'Integration Specialist', email: 'chris.nguyen@assetworks.com' },
+  ]
 
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
 
-      {/* Top bar */}
+      {/* ── TOP BAR ── */}
       <div style={{
         background: '#ffffff',
         borderBottom: '4px solid #A50021',
@@ -107,13 +86,8 @@ export default function Dashboard() {
         gap: '12px'
       }}>
         <div>
-          <div style={{
-            fontFamily: 'Oswald, sans-serif',
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#323E48'
-          }}>
-            Lakewood State University — PS Subscription
+          <div style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '16px', color: '#323E48' }}>
+            Lakewood State University — AiM Subscription
           </div>
           <div style={{ fontSize: '12px', color: '#697077' }}>
             Professional Services Portal · Customer view
@@ -123,15 +97,9 @@ export default function Dashboard() {
           <button
             onClick={() => router.push('/collaboration')}
             style={{
-              background: 'transparent',
-              color: '#A50021',
-              border: '2px solid #A50021',
-              fontFamily: 'Oswald, sans-serif',
-              fontWeight: 600,
-              fontSize: '13px',
-              borderRadius: '6px',
-              padding: '7px 16px',
-              cursor: 'pointer'
+              background: 'transparent', color: '#A50021', border: '2px solid #A50021',
+              fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '13px',
+              borderRadius: '6px', padding: '7px 16px', cursor: 'pointer'
             }}
           >
             Contact PS Team
@@ -139,23 +107,17 @@ export default function Dashboard() {
           <button
             onClick={() => router.push('/projects')}
             style={{
-              background: '#A50021',
-              color: '#ffffff',
-              border: 'none',
-              fontFamily: 'Oswald, sans-serif',
-              fontWeight: 600,
-              fontSize: '13px',
-              borderRadius: '6px',
-              padding: '7px 16px',
-              cursor: 'pointer'
+              background: '#A50021', color: '#ffffff', border: 'none',
+              fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '13px',
+              borderRadius: '6px', padding: '7px 16px', cursor: 'pointer'
             }}
           >
-            View Projects
+            Schedule Meeting
           </button>
         </div>
       </div>
 
-      {/* Page content */}
+      {/* ── PAGE BODY ── */}
       <div style={{ padding: '24px 28px 60px' }}>
 
         {/* ── STATUS STRIP ── */}
@@ -168,43 +130,39 @@ export default function Dashboard() {
 
           {/* Overall Health */}
           <div style={{
-            background: '#ffffff', border: '1px solid #CCCCCC',
+            background: '#fff', border: '1px solid #CCCCCC',
             borderRadius: '8px', padding: '16px 18px',
             boxShadow: '0 1px 3px rgba(50,62,72,.08)'
           }}>
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '8px' }}>
               Overall Health
             </div>
-            {pill(health, hLabel(health))}
+            {pill(health)}
             <div style={{ fontSize: '12px', color: '#697077', marginTop: '8px', lineHeight: 1.4 }}>
-              {data?.milestones?.[0]?.title || 'No upcoming milestones'}
+              Next milestone in {data?.milestones?.length || 0} items
             </div>
           </div>
 
-          {/* Active Projects */}
-          <button
-            onClick={() => router.push('/projects')}
-            style={{
-              background: '#ffffff', border: '1px solid #CCCCCC',
-              borderRadius: '8px', padding: '16px 18px',
-              boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-              cursor: 'pointer', textAlign: 'left'
-            }}
-          >
+          {/* Current Phase */}
+          <div style={{
+            background: '#fff', border: '1px solid #CCCCCC',
+            borderRadius: '8px', padding: '16px 18px',
+            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
+          }}>
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
-              Active Projects
+              Current Phase
             </div>
-            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '28px', fontWeight: 700, color: '#323E48' }}>
-              {data?.projects?.length || 0}
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '15px', fontWeight: 700, color: '#323E48', lineHeight: 1.3 }}>
+              PS Subscription — Year 1
             </div>
-            <div style={{ fontSize: '12px', color: '#00538C', marginTop: '4px', fontWeight: 600 }}>
-              View all →
+            <div style={{ fontSize: '12px', color: '#697077', marginTop: '3px' }}>
+              Phase 3 of 6
             </div>
-          </button>
+          </div>
 
           {/* Overall Progress */}
           <div style={{
-            background: '#ffffff', border: '1px solid #CCCCCC',
+            background: '#fff', border: '1px solid #CCCCCC',
             borderRadius: '8px', padding: '16px 18px',
             boxShadow: '0 1px 3px rgba(50,62,72,.08)'
           }}>
@@ -219,230 +177,202 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Next Milestone */}
-          <button
-            onClick={() => document.getElementById('milestones-section')?.scrollIntoView({ behavior: 'smooth' })}
-            style={{
-              background: '#ffffff', border: '1px solid #CCCCCC',
-              borderRadius: '8px', padding: '16px 18px',
-              boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-              cursor: 'pointer', textAlign: 'left'
-            }}
-          >
-            <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
-              Next Milestone
+          {/* Go-Live Target — highlighted */}
+          <div style={{
+            background: '#FBE7EA',
+            border: '2px solid #A50021',
+            borderTop: '5px solid #A50021',
+            borderRadius: '8px',
+            padding: '16px 18px',
+            boxShadow: '0 2px 8px rgba(165,0,33,0.12)'
+          }}>
+            <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#A50021', fontWeight: 700, marginBottom: '6px' }}>
+              🎯 Go-Live Target
             </div>
-            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '16px', fontWeight: 700, color: '#323E48', lineHeight: 1.3 }}>
-              {data?.milestones?.[0]?.due_date
-                ? new Date(data.milestones[0].due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : 'TBD'}
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '16px', fontWeight: 700, color: '#A50021' }}>
+              {data?.milestones?.[1]?.due_date
+                ? new Date(data.milestones[1].due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : 'Jul 12, 2026'}
             </div>
-            <div style={{ fontSize: '12px', color: '#697077', marginTop: '3px' }}>
-              {data?.milestones?.[0]?.title || '—'}
+            <div style={{ fontSize: '12px', color: '#8E1537', marginTop: '3px', fontWeight: 600 }}>
+              AiM 12.3 Production Upgrade
             </div>
-          </button>
+          </div>
 
-          {/* Announcements */}
-          <button
-            onClick={() => document.getElementById('announcements-section')?.scrollIntoView({ behavior: 'smooth' })}
-            style={{
-              background: '#ffffff', border: '1px solid #CCCCCC',
-              borderRadius: '8px', padding: '16px 18px',
-              boxShadow: '0 1px 3px rgba(50,62,72,.08)',
-              cursor: 'pointer', textAlign: 'left'
-            }}
-          >
+          {/* Open Action Items */}
+          <div style={{
+            background: '#fff', border: '1px solid #CCCCCC',
+            borderRadius: '8px', padding: '16px 18px',
+            boxShadow: '0 1px 3px rgba(50,62,72,.08)'
+          }}>
             <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '11px', color: '#8a9199', marginBottom: '6px' }}>
-              Announcements
+              Open Action Items
             </div>
             <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '28px', fontWeight: 700, color: '#323E48' }}>
-              {data?.announcements?.length || 0}
+              {actionItems.length}
             </div>
             <div style={{ fontSize: '12px', marginTop: '3px' }}>
               <span style={{ color: '#A50021', fontWeight: 600 }}>
-                {data?.announcements?.filter((a: any) => a.priority === 'high').length || 0} action needed
+                {actionItems.filter((d: any) => d.status === 'in-progress').length} in progress
               </span>
             </div>
-          </button>
+          </div>
 
         </div>
 
         {/* ── 2-COLUMN GRID ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
 
-          {/* LEFT */}
+          {/* ── LEFT COLUMN ── */}
           <div>
 
-            {/* Active Projects card */}
-            {card(
-              <>
-                {cardHead('Active Projects', () => router.push('/projects'))}
-                {data?.projects?.map((p: any, i: number) => (
-                  <button
-                    key={p.id}
-                    onClick={() => router.push('/projects')}
-                    style={{
-                      width: '100%', textAlign: 'left', background: 'none', border: 'none',
-                      padding: '12px 0',
-                      borderBottom: i < data.projects.length - 1 ? '1px solid #EAECEE' : 'none',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px'
-                    }}
-                  >
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
-                      background: p.health === 'green' ? '#2E7D32' : '#A50021',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                      fontFamily: 'Oswald, sans-serif'
-                    }}>
-                      {p.health === 'green' ? '✓' : i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#323E48' }}>{p.name}</span>
-                        {pill(p.health, hLabel(p.health))}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#697077', marginBottom: '6px' }}>
-                        PM: {p.pm_name}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ flex: 1, height: '6px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${p.pct_complete}%`, background: '#A50021', borderRadius: '4px' }} />
-                        </div>
-                        <span style={{ fontSize: '11px', color: '#697077', width: '36px', textAlign: 'right' }}>
-                          {p.pct_complete}%
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
+            {/* Implementation Timeline */}
+            <div style={{
+              background: '#fff', border: '1px solid #CCCCCC',
+              borderRadius: '8px', padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                  Implementation Timeline
+                </h3>
+                <button
+                  onClick={() => router.push('/projects')}
+                  style={{ background: 'none', border: 'none', fontSize: '12px', color: '#00538C', cursor: 'pointer' }}
+                >
+                  View full schedule →
+                </button>
+              </div>
 
-            {/* Announcements */}
-            <div
-              id="announcements-section"
-              style={{
-                background: '#ffffff', border: '1px solid #CCCCCC',
-                borderRadius: '8px', padding: '20px 22px',
-                boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
-              }}
-            >
-              {cardHead('Announcements')}
-              {data?.announcements?.map((a: any) => (
-                <div key={a.id} style={{ marginBottom: '8px' }}>
-                  <button
-                    onClick={() => setOpenAnnouncement(openAnnouncement === a.id ? null : a.id)}
-                    style={{
-                      width: '100%', textAlign: 'left', background: '#ffffff', border: 'none',
-                      borderLeft: `4px solid ${a.priority === 'high' ? '#A50021' : '#2E7D32'}`,
-                      borderRadius: '6px', padding: '12px 16px',
-                      boxShadow: '0 1px 3px rgba(50,62,72,.06)', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                      {a.priority === 'high' && (
-                        <span style={{
-                          fontSize: '9px', background: '#FBE7EA', color: '#A50021',
-                          padding: '2px 7px', borderRadius: '4px', fontWeight: 700,
-                          border: '1px solid #f5c6cb', fontFamily: 'Oswald, sans-serif',
-                          textTransform: 'uppercase', whiteSpace: 'nowrap'
-                        }}>
-                          Action Needed
-                        </span>
-                      )}
-                      {a.is_pinned && (
-                        <span style={{
-                          fontSize: '9px', background: '#E7F3E8', color: '#2E7D32',
-                          padding: '2px 7px', borderRadius: '4px', fontWeight: 700,
-                          fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', whiteSpace: 'nowrap'
-                        }}>
-                          Pinned
-                        </span>
-                      )}
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#323E48' }}>
-                        {a.title}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#8a9199', flexShrink: 0 }}>
-                      {openAnnouncement === a.id ? '▲' : '▼'}
-                    </span>
-                  </button>
-                  {openAnnouncement === a.id && (
-                    <div style={{
-                      background: '#F4F5F6', borderRadius: '0 0 6px 6px',
-                      padding: '12px 16px', borderTop: '1px solid #EAECEE'
-                    }}>
-                      <p style={{ fontSize: '13px', color: '#697077', lineHeight: 1.7, marginBottom: '8px' }}>
-                        {a.body}
-                      </p>
-                      <p style={{ fontSize: '11px', color: '#8a9199' }}>
-                        By {a.author} · {new Date(a.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </div>
-                  )}
+              {phases.map((phase, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '10px 0',
+                  borderBottom: i < phases.length - 1 ? '1px solid #EAECEE' : 'none'
+                }}>
+                  <div style={{
+                    width: '26px', height: '26px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, fontSize: '11px', fontWeight: 700, color: '#fff',
+                    fontFamily: 'Oswald, sans-serif',
+                    background: phase.status === 'done' ? '#2E7D32' : phase.status === 'active' ? '#A50021' : '#C9CFD4'
+                  }}>
+                    {phase.status === 'done' ? '✓' : i + 1}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#323E48' }}>{phase.name}</div>
+                    <div style={{ fontSize: '11px', color: '#8a9199' }}>{phase.dates}</div>
+                  </div>
+                  <div style={{ width: '120px', height: '6px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                    <div style={{ height: '100%', width: `${phase.pct}%`, background: '#A50021', borderRadius: '4px' }} />
+                  </div>
+                  <div style={{ width: '36px', textAlign: 'right', fontSize: '12px', color: '#697077', flexShrink: 0 }}>
+                    {phase.pct}%
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Activity Feed */}
-            {card(
-              <>
-                {cardHead('Recent Activity')}
-                {data?.activity?.map((a: any, i: number) => (
-                  <button
-                    key={a.id}
-                    onClick={() => router.push('/projects')}
-                    style={{
-                      width: '100%', textAlign: 'left', background: 'none', border: 'none',
-                      display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '10px 0',
-                      borderBottom: i < (data?.activity?.length - 1) ? '1px solid #EAECEE' : 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{
-                      width: '30px', height: '30px', borderRadius: '50%',
-                      background: '#EAECEE', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontSize: '14px', flexShrink: 0
-                    }}>
-                      {a.icon}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', color: '#323E48' }}>
-                        <strong>{a.actor}</strong> {a.action} <strong>{a.target}</strong>
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#8a9199' }}>
-                        {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      <span style={{ fontSize: '12px', color: '#A50021' }}>→</span>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
+            {/* Action Items */}
+            <div style={{
+              background: '#fff', border: '1px solid #CCCCCC',
+              borderRadius: '8px', padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                  Action Items
+                </h3>
+                <button
+                  onClick={() => router.push('/projects')}
+                  style={{ background: 'none', border: 'none', fontSize: '12px', color: '#00538C', cursor: 'pointer' }}
+                >
+                  View all →
+                </button>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr>
+                    {['Item', 'Owner', 'Due', 'Status'].map(h => (
+                      <th key={h} style={{
+                        background: '#323E48', color: '#fff',
+                        fontFamily: 'Oswald, sans-serif', fontWeight: 600,
+                        textAlign: 'left', padding: '7px 10px',
+                        fontSize: '11px', textTransform: 'uppercase', letterSpacing: '.4px'
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {actionItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ padding: '16px 10px', color: '#8a9199', fontSize: '12px', textAlign: 'center' }}>
+                        No open action items
+                      </td>
+                    </tr>
+                  ) : actionItems.map((item: any, i: number) => (
+                    <tr key={item.id} style={{ background: i % 2 === 0 ? '#fff' : '#F4F5F6' }}>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top', fontSize: '13px', color: '#323E48' }}>
+                        {item.name}
+                      </td>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            width: '20px', height: '20px', borderRadius: '50%',
+                            background: '#1F3864', color: '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '9px', fontWeight: 700, fontFamily: 'Oswald, sans-serif'
+                          }}>
+                            {item.owner?.split(' ').map((n: string) => n[0]).join('') || 'AW'}
+                          </div>
+                          <span style={{ fontSize: '12px', color: '#323E48' }}>{item.owner || 'AssetWorks'}</span>
+                        </div>
+                      </td>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top', fontSize: '12px', color: '#697077' }}>
+                        {item.due_date || 'TBD'}
+                      </td>
+                      <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', verticalAlign: 'top' }}>
+                        <span style={{
+                          fontSize: '11px', fontWeight: 600, padding: '2px 8px',
+                          borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '.3px',
+                          fontFamily: 'Oswald, sans-serif',
+                          background: item.status === 'in-progress' ? '#FBE7EA' : '#E9F1F7',
+                          color: item.status === 'in-progress' ? '#A50021' : '#00538C'
+                        }}>
+                          {item.status === 'in-progress' ? 'In Progress' : 'Scheduled'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
           </div>
 
-          {/* RIGHT */}
+          {/* ── RIGHT COLUMN ── */}
           <div>
 
             {/* Upcoming Meetings */}
-            {card(
-              <>
-                {cardHead('Upcoming Meetings')}
-                {data?.appointments?.map((a: any, i: number) => (
+            <div style={{
+              background: '#fff', border: '1px solid #CCCCCC',
+              borderRadius: '8px', padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
+            }}>
+              <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '14px' }}>
+                Upcoming Meetings
+              </h3>
+              {data?.appointments?.map((a: any, i: number) => (
+                <div key={a.id}>
                   <button
-                    key={a.id}
-                    onClick={() => setOpenAppointment(openAppointment === a.id ? null : a.id)}
+                    onClick={() => setOpenAppt(openAppt === a.id ? null : a.id)}
                     style={{
                       width: '100%', textAlign: 'left', background: 'none', border: 'none',
                       display: 'flex', gap: '12px', padding: '10px 0',
-                      borderBottom: i < (data?.appointments?.length - 1) ? '1px solid #EAECEE' : 'none',
-                      cursor: 'pointer'
+                      borderBottom: '1px solid #EAECEE', cursor: 'pointer'
                     }}
                   >
                     <div style={{ width: '44px', textAlign: 'center', flexShrink: 0 }}>
@@ -458,106 +388,108 @@ export default function Dashboard() {
                         {a.title}
                       </div>
                       <div style={{ fontSize: '11px', color: '#8a9199' }}>
-                        {a.consultant} · {a.location}
+                        {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} · {a.consultant}
                       </div>
                     </div>
+                    <span style={{ fontSize: '12px', color: '#8a9199', alignSelf: 'center' }}>
+                      {openAppt === a.id ? '▲' : '▼'}
+                    </span>
                   </button>
-                ))}
-                {/* Expanded appointment detail */}
-                {openAppointment && data?.appointments?.filter((a: any) => a.id === openAppointment).map((a: any) => (
-                  <div key={a.id} style={{
-                    marginTop: '10px', padding: '12px 14px',
-                    background: '#F4F5F6', borderRadius: '8px',
-                    border: '1px solid #CCCCCC'
-                  }}>
-                    <p style={{ fontSize: '12px', color: '#697077', marginBottom: '10px', lineHeight: 1.6 }}>
-                      📅 {new Date(a.scheduled_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}<br />
-                      🕐 {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}<br />
-                      👤 {a.consultant}<br />
-                      📍 {a.location}
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}>
-                        Join Meeting
-                      </button>
-                      <button style={{ padding: '6px 14px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                        Reschedule
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* Milestones */}
-            <div id="milestones-section">
-              {card(
-                <>
-                  {cardHead('Upcoming Milestones')}
-                  {data?.milestones?.map((m: any, i: number) => (
-                    <div key={m.id} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '10px',
-                      padding: '9px 0',
-                      borderBottom: i < (data?.milestones?.length - 1) ? '1px solid #EAECEE' : 'none'
+                  {openAppt === a.id && (
+                    <div style={{
+                      padding: '10px 12px', background: '#F4F5F6',
+                      borderBottom: '1px solid #CCCCCC',
+                      fontSize: '12px', color: '#697077', lineHeight: 1.7
                     }}>
-                      <div style={{
-                        width: '28px', height: '28px', borderRadius: '5px',
-                        background: '#EAECEE', color: '#A50021',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '14px', flexShrink: 0
-                      }}>
-                        🎯
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, color: '#323E48', fontSize: '12px', marginBottom: '2px' }}>
-                          {m.title}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#8a9199' }}>
-                          {m.due_date
-                            ? new Date(m.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                            : 'TBD'} · {m.owner}
-                        </div>
+                      📍 {a.location}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button style={{ padding: '5px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}>
+                          Join
+                        </button>
+                        <button style={{ padding: '5px 12px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                          Reschedule
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </>
-              )}
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* PS Team */}
-            {card(
-              <>
-                {cardHead('Your AssetWorks Team')}
-                {[
-                  { initials: 'AR', name: 'Amanda Rivera', role: 'Dedicated CSM', email: 'amanda.rivera@assetworks.com' },
-                  { initials: 'JT', name: 'James Thornton', role: 'Senior Consultant', email: 'james.thornton@assetworks.com' },
-                  { initials: 'CN', name: 'Chris Nguyen', role: 'Integration Specialist', email: 'chris.nguyen@assetworks.com' },
-                ].map((c, i) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: '10px', alignItems: 'flex-start',
-                    padding: '10px 0',
-                    borderBottom: i < 2 ? '1px solid #EAECEE' : 'none'
+            {/* Documents */}
+            <div style={{
+              background: '#fff', border: '1px solid #CCCCCC',
+              borderRadius: '8px', padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
+            }}>
+              <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '14px' }}>
+                Documents
+              </h3>
+              {documents.map((doc, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 0',
+                  borderBottom: i < documents.length - 1 ? '1px solid #EAECEE' : 'none'
+                }}>
+                  <div style={{
+                    width: '32px', height: '32px', borderRadius: '5px',
+                    background: '#EAECEE', color: '#A50021',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '9px', fontWeight: 700, flexShrink: 0,
+                    fontFamily: 'Oswald, sans-serif'
                   }}>
-                    <div style={{
-                      width: '34px', height: '34px', borderRadius: '50%',
-                      background: '#1F3864', color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', fontWeight: 700, flexShrink: 0,
-                      fontFamily: 'Oswald, sans-serif'
-                    }}>
-                      {c.initials}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '13px', color: '#323E48' }}>{c.name}</div>
-                      <div style={{ fontSize: '11px', color: '#8a9199' }}>{c.role}</div>
-                      <div style={{ fontSize: '11px', marginTop: '2px' }}>
-                        <a href={`mailto:${c.email}`} style={{ color: '#00538C' }}>{c.email}</a>
-                      </div>
-                    </div>
+                    {doc.icon}
                   </div>
-                ))}
-              </>
-            )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, color: '#323E48', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {doc.name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#8a9199' }}>{doc.sub}</div>
+                  </div>
+                  <button style={{
+                    background: 'none', border: 'none', color: '#00538C',
+                    fontSize: '14px', cursor: 'pointer', flexShrink: 0, fontWeight: 600
+                  }}>
+                    ↓
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Your AssetWorks Team */}
+            <div style={{
+              background: '#fff', border: '1px solid #CCCCCC',
+              borderRadius: '8px', padding: '20px 22px',
+              boxShadow: '0 1px 3px rgba(50,62,72,.08)'
+            }}>
+              <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '14px' }}>
+                Your AssetWorks Team
+              </h3>
+              {team.map((c, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: '10px', alignItems: 'flex-start',
+                  padding: '10px 0',
+                  borderBottom: i < team.length - 1 ? '1px solid #EAECEE' : 'none'
+                }}>
+                  <div style={{
+                    width: '34px', height: '34px', borderRadius: '50%',
+                    background: '#1F3864', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '11px', fontWeight: 700, flexShrink: 0,
+                    fontFamily: 'Oswald, sans-serif'
+                  }}>
+                    {c.initials}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#323E48' }}>{c.name}</div>
+                    <div style={{ fontSize: '11px', color: '#8a9199' }}>{c.role}</div>
+                    <a href={`mailto:${c.email}`} style={{ fontSize: '11px', color: '#00538C', marginTop: '2px', display: 'block' }}>
+                      {c.email}
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
 
           </div>
         </div>
