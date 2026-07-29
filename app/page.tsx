@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import UploadButton from '@/components/UploadButton'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -283,9 +284,12 @@ export default function Dashboard() {
               boxShadow: '0 1px 3px rgba(50,62,72,.08)', marginBottom: '20px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
-                  Implementation Timeline
+                  Documents
                 </h3>
+                <UploadButton uploadedBy="Portal User" />
+              </div>
                 <button
                   onClick={() => router.push('/projects')}
                   style={{ background: 'none', border: 'none', fontSize: '12px', color: '#00538C', cursor: 'pointer' }}
