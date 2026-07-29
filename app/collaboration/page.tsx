@@ -11,6 +11,7 @@ export default function CollaborationHub() {
   const [openDiscussion, setOpenDiscussion] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [documents, setDocuments] = useState<any[]>([])
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/collaboration')
@@ -30,6 +31,27 @@ export default function CollaborationHub() {
       <p style={{ color: '#697077', marginTop: '12px' }}>Loading collaboration hub...</p>
     </div>
   )
+
+  const handleDelete = async (doc: any) => {
+    if (!confirm(`Delete "${doc.title}"? This cannot be undone.`)) return
+    setDeletingId(doc.id)
+    try {
+      const res = await fetch('/api/documents/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: doc.id, fileUrl: doc.file_url })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDocuments(prev => prev.filter(d => d.id !== doc.id))
+      } else {
+        alert('Delete failed. Please try again.')
+      }
+    } catch {
+      alert('Something went wrong. Please try again.')
+    }
+    setDeletingId(null)
+  }
 
   const tabs = [
     { id: 'announcements', label: 'Announcements' },
@@ -97,22 +119,13 @@ export default function CollaborationHub() {
                 borderTop: '4px solid #A50021',
                 borderRadius: '8px', padding: '14px 12px',
                 boxShadow: activeTab === k.tab ? '0 2px 8px rgba(165,0,33,0.15)' : '0 1px 3px rgba(50,62,72,.08)',
-                cursor: 'pointer', textAlign: 'left',
-                transition: 'all 0.15s'
+                cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s'
               }}
             >
-              <div style={{
-                fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase',
-                letterSpacing: '1px', fontSize: '10px',
-                color: activeTab === k.tab ? 'rgba(255,255,255,0.7)' : '#8a9199',
-                marginBottom: '4px'
-              }}>
+              <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '10px', color: activeTab === k.tab ? 'rgba(255,255,255,0.7)' : '#8a9199', marginBottom: '4px' }}>
                 {k.label}
               </div>
-              <div style={{
-                fontFamily: 'Oswald, sans-serif', fontSize: '24px', fontWeight: 700,
-                color: activeTab === k.tab ? '#ffffff' : '#323E48'
-              }}>
+              <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '24px', fontWeight: 700, color: activeTab === k.tab ? '#ffffff' : '#323E48' }}>
                 {k.value}
               </div>
             </button>
@@ -120,11 +133,7 @@ export default function CollaborationHub() {
         </div>
 
         {/* Tab bar */}
-        <div style={{
-          display: 'flex', borderBottom: '1px solid #CCCCCC',
-          marginBottom: '20px', background: '#ffffff',
-          borderRadius: '8px 8px 0 0', overflow: 'hidden'
-        }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #CCCCCC', marginBottom: '20px', background: '#ffffff', borderRadius: '8px 8px 0 0', overflow: 'hidden' }}>
           {tabs.map(t => (
             <button
               key={t.id}
@@ -137,8 +146,7 @@ export default function CollaborationHub() {
                 background: activeTab === t.id ? '#ffffff' : '#F4F5F6',
                 border: 'none',
                 borderBottom: activeTab === t.id ? '3px solid #A50021' : '3px solid transparent',
-                cursor: 'pointer', transition: 'all 0.15s',
-                whiteSpace: 'nowrap'
+                cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
               }}
             >
               {t.label}
@@ -175,29 +183,16 @@ export default function CollaborationHub() {
                     {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 </div>
-                <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, marginBottom: '10px' }}>
-                  {a.body}
-                </p>
+                <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, marginBottom: '10px' }}>{a.body}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{
-                    width: '24px', height: '24px', borderRadius: '50%',
-                    background: avatarColor(a.author),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '9px', fontWeight: 700, color: '#fff', fontFamily: 'Oswald, sans-serif'
-                  }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: avatarColor(a.author), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#fff', fontFamily: 'Oswald, sans-serif' }}>
                     {initials(a.author)}
                   </div>
                   <span style={{ fontSize: '11px', color: '#697077' }}>Posted by {a.author}</span>
                 </div>
               </div>
             ))}
-            <button style={{
-              padding: '14px', background: 'transparent',
-              border: '2px dashed #A50021', borderRadius: '8px',
-              fontSize: '12px', color: '#A50021', cursor: 'pointer',
-              fontFamily: 'Oswald, sans-serif', fontWeight: 600,
-              textTransform: 'uppercase', letterSpacing: '.3px'
-            }}>
+            <button style={{ padding: '14px', background: 'transparent', border: '2px dashed #A50021', borderRadius: '8px', fontSize: '12px', color: '#A50021', cursor: 'pointer', fontFamily: 'Oswald, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.3px' }}>
               + Post New Announcement
             </button>
           </div>
@@ -212,24 +207,12 @@ export default function CollaborationHub() {
                 <p style={{ fontSize: '13px', color: '#697077' }}>No meeting notes yet.</p>
               </div>
             ) : data?.meetingNotes?.map((m: any) => (
-              <div key={m.id} style={{
-                background: '#ffffff', border: '2px solid #A50021',
-                borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-                overflow: 'hidden'
-              }}>
+              <div key={m.id} style={{ background: '#ffffff', border: '2px solid #A50021', borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', overflow: 'hidden' }}>
                 <button
                   onClick={() => setOpenNote(openNote === m.id ? null : m.id)}
-                  style={{
-                    width: '100%', textAlign: 'left', background: 'none',
-                    border: 'none', padding: '16px 20px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '14px'
-                  }}
+                  style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px' }}
                 >
-                  <div style={{
-                    width: '48px', height: '48px', borderRadius: '8px',
-                    background: '#A50021', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                  }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#A50021', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>
                       {new Date(m.meeting_date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                     </div>
@@ -238,22 +221,15 @@ export default function CollaborationHub() {
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '4px' }}>
-                      {m.title}
-                    </h3>
+                    <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '4px' }}>{m.title}</h3>
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <span style={{ fontSize: '10px', color: '#697077' }}>By {m.author}</span>
-                      {m.attendees && (
-                        <span style={{ fontSize: '10px', color: '#697077' }}>👥 {m.attendees.length} attendees</span>
-                      )}
-                      {m.action_items && (
-                        <span style={{ fontSize: '10px', color: '#A50021', fontWeight: 600 }}>✅ {m.action_items.length} action items</span>
-                      )}
+                      {m.attendees && <span style={{ fontSize: '10px', color: '#697077' }}>👥 {m.attendees.length} attendees</span>}
+                      {m.action_items && <span style={{ fontSize: '10px', color: '#A50021', fontWeight: 600 }}>✅ {m.action_items.length} action items</span>}
                     </div>
                   </div>
                   <span style={{ fontSize: '12px', color: '#8a9199' }}>{openNote === m.id ? '▲' : '▼'}</span>
                 </button>
-
                 {openNote === m.id && (
                   <div style={{ padding: '0 20px 20px', borderTop: '1px solid #FBE7EA' }}>
                     {m.body && (
@@ -268,13 +244,7 @@ export default function CollaborationHub() {
                           <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Attendees</p>
                           {m.attendees.map((attendee: string, i: number) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                              <div style={{
-                                width: '26px', height: '26px', borderRadius: '50%',
-                                background: avatarColor(attendee),
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '9px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                                fontFamily: 'Oswald, sans-serif'
-                              }}>
+                              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: avatarColor(attendee), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
                                 {initials(attendee)}
                               </div>
                               <span style={{ fontSize: '11px', color: '#323E48' }}>{attendee}</span>
@@ -295,24 +265,14 @@ export default function CollaborationHub() {
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #FBE7EA' }}>
-                      <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-                        View Full Notes
-                      </button>
-                      <button style={{ padding: '6px 14px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                        ⬇️ Download
-                      </button>
+                      <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>View Full Notes</button>
+                      <button style={{ padding: '6px 14px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>⬇️ Download</button>
                     </div>
                   </div>
                 )}
               </div>
             ))}
-            <button style={{
-              padding: '14px', background: 'transparent',
-              border: '2px dashed #A50021', borderRadius: '8px',
-              fontSize: '12px', color: '#A50021', cursor: 'pointer',
-              fontFamily: 'Oswald, sans-serif', fontWeight: 600,
-              textTransform: 'uppercase', letterSpacing: '.3px'
-            }}>
+            <button style={{ padding: '14px', background: 'transparent', border: '2px dashed #A50021', borderRadius: '8px', fontSize: '12px', color: '#A50021', cursor: 'pointer', fontFamily: 'Oswald, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.3px' }}>
               + Add Meeting Notes
             </button>
           </div>
@@ -321,17 +281,10 @@ export default function CollaborationHub() {
         {/* ── SHARED DOCUMENTS ── */}
         {activeTab === 'documents' && (
           <div>
-            <div style={{
-              background: '#ffffff', border: '2px solid #A50021',
-              borderRadius: '8px', overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '12px'
-            }}>
-              {/* Header with upload button */}
-              <div style={{
-                padding: '12px 16px', background: '#A50021',
-                borderBottom: '1px solid #8E1537',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-              }}>
+            <div style={{ background: '#ffffff', border: '2px solid #A50021', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '12px' }}>
+
+              {/* Header */}
+              <div style={{ padding: '12px 16px', background: '#A50021', borderBottom: '1px solid #8E1537', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   Shared Documents — {documents.length} files
                 </p>
@@ -359,14 +312,13 @@ export default function CollaborationHub() {
                   borderBottom: i < documents.length - 1 ? '1px solid #EAECEE' : 'none',
                   background: i % 2 === 0 ? '#ffffff' : '#F4F5F6'
                 }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '6px',
-                    background: '#FBE7EA', color: '#A50021',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '20px', flexShrink: 0
-                  }}>
+
+                  {/* File icon */}
+                  <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#FBE7EA', color: '#A50021', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                     {fileIcon(d.file_type)}
                   </div>
+
+                  {/* File info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {d.title}
@@ -375,25 +327,35 @@ export default function CollaborationHub() {
                       <span style={{ fontSize: '9px', background: '#FBE7EA', color: '#A50021', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                         {d.file_type?.toUpperCase() || 'FILE'}
                       </span>
-                      {d.category && (
-                        <span style={{ fontSize: '10px', color: '#8a9199' }}>{d.category}</span>
-                      )}
+                      {d.category && <span style={{ fontSize: '10px', color: '#8a9199' }}>{d.category}</span>}
                       <span style={{ fontSize: '10px', color: '#8a9199' }}>
                         By {d.uploaded_by} · {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
+
+                  {/* Actions */}
                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <button
                       onClick={() => window.open(`/api/documents/download?file=${d.file_url?.split('/').pop()}`, '_blank')}
+                      style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}
+                    >
+                      ⬇️ Download
+                    </button>
+                    <button
+                      onClick={() => handleDelete(d)}
+                      disabled={deletingId === d.id}
                       style={{
-                        padding: '6px 14px', background: '#A50021', color: '#fff',
-                        border: 'none', borderRadius: '5px', fontSize: '11px',
-                        fontWeight: 700, cursor: 'pointer',
+                        padding: '6px 14px',
+                        background: deletingId === d.id ? '#C9CFD4' : '#ffffff',
+                        color: deletingId === d.id ? '#ffffff' : '#A50021',
+                        border: '2px solid #A50021',
+                        borderRadius: '5px', fontSize: '11px',
+                        fontWeight: 700, cursor: deletingId === d.id ? 'default' : 'pointer',
                         fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
                       }}
                     >
-                      ⬇️ Download
+                      {deletingId === d.id ? 'Deleting...' : '🗑 Delete'}
                     </button>
                   </div>
                 </div>
@@ -410,24 +372,12 @@ export default function CollaborationHub() {
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
               {data?.team?.filter((m: any) => m.is_ps_team).map((member: any) => (
-                <div key={member.id} style={{
-                  background: '#ffffff', border: '2px solid #A50021',
-                  borderLeft: '5px solid #A50021', borderRadius: '8px',
-                  padding: '18px 20px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-                  display: 'flex', alignItems: 'flex-start', gap: '14px'
-                }}>
-                  <div style={{
-                    width: '42px', height: '42px', borderRadius: '50%',
-                    background: '#1F3864', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '13px', fontWeight: 700,
-                    color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif'
-                  }}>
+                <div key={member.id} style={{ background: '#ffffff', border: '2px solid #A50021', borderLeft: '5px solid #A50021', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#1F3864', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
                     {initials(member.name)}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '2px' }}>
-                      {member.name}
-                    </h3>
+                    <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '2px' }}>{member.name}</h3>
                     <p style={{ fontSize: '11px', color: '#A50021', fontWeight: 600, marginBottom: '6px' }}>{member.role}</p>
                     {member.email && (
                       <a href={`mailto:${member.email}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#00538C', textDecoration: 'none', marginBottom: '8px' }}>
@@ -435,18 +385,13 @@ export default function CollaborationHub() {
                       </a>
                     )}
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{ padding: '5px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-                        Message
-                      </button>
-                      <button style={{ padding: '5px 12px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>
-                        📅 Schedule
-                      </button>
+                      <button style={{ padding: '5px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>Message</button>
+                      <button style={{ padding: '5px 12px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>📅 Schedule</button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-
             {data?.team?.filter((m: any) => !m.is_ps_team).length > 0 && (
               <>
                 <h2 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
@@ -454,28 +399,15 @@ export default function CollaborationHub() {
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {data?.team?.filter((m: any) => !m.is_ps_team).map((member: any) => (
-                    <div key={member.id} style={{
-                      background: '#ffffff', border: '2px solid #A50021',
-                      borderRadius: '8px', padding: '16px 18px',
-                      boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-                      display: 'flex', alignItems: 'center', gap: '12px'
-                    }}>
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '50%',
-                        background: avatarColor(member.name),
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                        fontFamily: 'Oswald, sans-serif'
-                      }}>
+                    <div key={member.id} style={{ background: '#ffffff', border: '2px solid #A50021', borderRadius: '8px', padding: '16px 18px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarColor(member.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
                         {initials(member.name)}
                       </div>
                       <div>
                         <p style={{ fontSize: '12px', fontWeight: 700, color: '#323E48' }}>{member.name}</p>
                         <p style={{ fontSize: '10px', color: '#697077' }}>{member.role}</p>
                         {member.email && (
-                          <a href={`mailto:${member.email}`} style={{ fontSize: '10px', color: '#00538C', textDecoration: 'none' }}>
-                            {member.email}
-                          </a>
+                          <a href={`mailto:${member.email}`} style={{ fontSize: '10px', color: '#00538C', textDecoration: 'none' }}>{member.email}</a>
                         )}
                       </div>
                     </div>
@@ -489,11 +421,7 @@ export default function CollaborationHub() {
         {/* ── DISCUSSIONS ── */}
         {activeTab === 'discussions' && (
           <div>
-            <div style={{
-              background: '#ffffff', border: '2px solid #A50021',
-              borderRadius: '8px', padding: '16px 20px',
-              boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '16px'
-            }}>
+            <div style={{ background: '#ffffff', border: '2px solid #A50021', borderRadius: '8px', padding: '16px 20px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '16px' }}>
               <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '8px' }}>
                 Start a New Discussion
               </p>
@@ -501,28 +429,17 @@ export default function CollaborationHub() {
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
                 placeholder="What would you like to discuss with your PS team?"
-                style={{
-                  width: '100%', padding: '10px 14px', fontSize: '12px',
-                  border: '1px solid #A50021', borderRadius: '6px',
-                  resize: 'none', height: '70px', color: '#323E48',
-                  outline: 'none', fontFamily: 'Roboto, sans-serif'
-                }}
+                style={{ width: '100%', padding: '10px 14px', fontSize: '12px', border: '1px solid #A50021', borderRadius: '6px', resize: 'none', height: '70px', color: '#323E48', outline: 'none', fontFamily: 'Roboto, sans-serif' }}
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button
                   onClick={() => setNewMessage('')}
-                  style={{
-                    padding: '7px 18px', background: '#A50021', color: '#fff',
-                    border: 'none', borderRadius: '5px', fontSize: '11px',
-                    fontWeight: 700, cursor: 'pointer',
-                    fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                  }}
+                  style={{ padding: '7px 18px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}
                 >
                   Post Discussion
                 </button>
               </div>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {data?.discussions?.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px', background: '#ffffff', borderRadius: '8px', border: '2px solid #A50021' }}>
@@ -530,78 +447,43 @@ export default function CollaborationHub() {
                   <p style={{ fontSize: '13px', color: '#697077' }}>No discussions yet. Start one above.</p>
                 </div>
               ) : data?.discussions?.map((d: any) => (
-                <div key={d.id} style={{
-                  background: '#ffffff', border: '2px solid #A50021',
-                  borderLeft: d.is_pinned ? '5px solid #A50021' : '2px solid #A50021',
-                  borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-                  overflow: 'hidden'
-                }}>
+                <div key={d.id} style={{ background: '#ffffff', border: '2px solid #A50021', borderLeft: d.is_pinned ? '5px solid #A50021' : '2px solid #A50021', borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)', overflow: 'hidden' }}>
                   <button
                     onClick={() => setOpenDiscussion(openDiscussion === d.id ? null : d.id)}
-                    style={{
-                      width: '100%', textAlign: 'left', background: 'none',
-                      border: 'none', padding: '16px 20px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'flex-start', gap: '12px'
-                    }}
+                    style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '12px' }}
                   >
-                    <div style={{
-                      width: '34px', height: '34px', borderRadius: '50%',
-                      background: avatarColor(d.author),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                      fontFamily: 'Oswald, sans-serif'
-                    }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(d.author), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
                       {initials(d.author)}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         {d.is_pinned && (
-                          <span style={{ fontSize: '9px', background: '#A50021', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-                            Pinned
-                          </span>
+                          <span style={{ fontSize: '9px', background: '#A50021', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>Pinned</span>
                         )}
-                        <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48' }}>
-                          {d.title}
-                        </h3>
+                        <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 700, color: '#323E48' }}>{d.title}</h3>
                       </div>
                       <p style={{ fontSize: '11px', color: '#697077', lineHeight: 1.5, marginBottom: '6px' }}>
                         {d.body?.substring(0, 120)}{d.body?.length > 120 ? '...' : ''}
                       </p>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         <span style={{ fontSize: '10px', color: '#697077' }}>By {d.author}</span>
-                        <span style={{ fontSize: '10px', color: '#8a9199' }}>
-                          {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                        <span style={{ fontSize: '10px', color: '#A50021', fontWeight: 600 }}>
-                          💬 {d.reply_count || 0} replies
-                        </span>
+                        <span style={{ fontSize: '10px', color: '#8a9199' }}>{new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span style={{ fontSize: '10px', color: '#A50021', fontWeight: 600 }}>💬 {d.reply_count || 0} replies</span>
                       </div>
                     </div>
-                    <span style={{ fontSize: '12px', color: '#8a9199', flexShrink: 0 }}>
-                      {openDiscussion === d.id ? '▲' : '▼'}
-                    </span>
+                    <span style={{ fontSize: '12px', color: '#8a9199', flexShrink: 0 }}>{openDiscussion === d.id ? '▲' : '▼'}</span>
                   </button>
-
                   {openDiscussion === d.id && (
                     <div style={{ padding: '0 20px 16px', borderTop: '1px solid #FBE7EA' }}>
                       <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, margin: '14px 0' }}>{d.body}</p>
                       <div style={{ background: '#FBE7EA', borderRadius: '6px', padding: '10px 14px', marginBottom: '10px' }}>
-                        <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', color: '#A50021', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '6px' }}>
-                          Reply
-                        </p>
+                        <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', color: '#A50021', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '6px' }}>Reply</p>
                         <textarea
                           placeholder="Type your reply..."
-                          style={{
-                            width: '100%', padding: '8px 12px', fontSize: '11px',
-                            border: '1px solid #A50021', borderRadius: '5px',
-                            resize: 'none', height: '60px', color: '#323E48',
-                            outline: 'none', fontFamily: 'Roboto, sans-serif', background: '#fff'
-                          }}
+                          style={{ width: '100%', padding: '8px 12px', fontSize: '11px', border: '1px solid #A50021', borderRadius: '5px', resize: 'none', height: '60px', color: '#323E48', outline: 'none', fontFamily: 'Roboto, sans-serif', background: '#fff' }}
                         />
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                          <button style={{ padding: '5px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-                            Reply
-                          </button>
+                          <button style={{ padding: '5px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>Reply</button>
                         </div>
                       </div>
                     </div>
