@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import UploadButton from '@/components/UploadButton'
 
 export default function CollaborationHub() {
   const [data, setData] = useState<any>(null)
@@ -9,12 +10,18 @@ export default function CollaborationHub() {
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [openDiscussion, setOpenDiscussion] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
+  const [documents, setDocuments] = useState<any[]>([])
 
   useEffect(() => {
     fetch('/api/collaboration')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
+
+    fetch('/api/documents')
+      .then(r => r.json())
+      .then(d => setDocuments(d.documents || []))
+      .catch(() => {})
   }, [])
 
   if (loading) return (
@@ -324,7 +331,7 @@ export default function CollaborationHub() {
           </div>
         )}
 
-        {/* ── SHARED DOCUMENTS ── */}
+       {/* ── SHARED DOCUMENTS ── */}
         {activeTab === 'documents' && (
           <div>
             <div style={{
@@ -334,75 +341,88 @@ export default function CollaborationHub() {
               boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
               marginBottom: '12px'
             }}>
-              <div style={{ padding: '12px 16px', background: '#A50021', borderBottom: '1px solid #8E1537' }}>
+              {/* Header with upload button */}
+              <div style={{
+                padding: '12px 16px', background: '#A50021',
+                borderBottom: '1px solid #8E1537',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              }}>
                 <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  Shared Documents
+                  Shared Documents — {documents.length} files
                 </p>
+                <UploadButton
+                  uploadedBy="Portal User"
+                  onUploadComplete={(doc) => setDocuments(prev => [doc, ...prev])}
+                />
               </div>
-              {data?.documents?.length === 0 ? (
+
+              {/* Document list */}
+              {documents.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>📁</div>
-                  <p style={{ fontSize: '13px', color: '#697077', marginBottom: '16px' }}>No shared documents yet.</p>
-                  <button style={{
-                    padding: '10px 20px', background: '#A50021', color: '#fff',
-                    border: 'none', borderRadius: '6px', fontSize: '12px',
-                    fontWeight: 700, cursor: 'pointer',
-                    fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                  }}>
-                    + Upload First Document
-                  </button>
+                  <div style={{ fontSize: '48px', marginBottom: '14px' }}>📁</div>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#323E48', marginBottom: '6px', fontFamily: 'Oswald, sans-serif' }}>
+                    No documents yet
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#697077', marginBottom: '20px' }}>
+                    Upload your first document using the button above
+                  </p>
                 </div>
-              ) : data.documents.map((d: any, i: number) => (
+              ) : documents.map((d: any, i: number) => (
                 <div key={d.id} style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   padding: '12px 18px',
-                  borderBottom: i < data.documents.length - 1 ? '1px solid #EAECEE' : 'none',
+                  borderBottom: i < documents.length - 1 ? '1px solid #EAECEE' : 'none',
                   background: i % 2 === 0 ? '#ffffff' : '#F4F5F6'
                 }}>
+                  {/* File type icon */}
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '6px',
+                    width: '40px', height: '40px', borderRadius: '6px',
                     background: '#FBE7EA', color: '#A50021',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '9px', fontWeight: 700, flexShrink: 0,
-                    fontFamily: 'Oswald, sans-serif'
+                    fontSize: '20px', flexShrink: 0
                   }}>
-                    {d.file_type?.toUpperCase() || 'DOC'}
+                    {d.file_type === 'pdf' ? '📕' :
+                     d.file_type?.match(/xlsx?/) ? '📗' :
+                     d.file_type?.match(/docx?/) ? '📘' :
+                     d.file_type?.match(/pptx?/) ? '📙' : '📄'}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '2px' }}>{d.title}</p>
-                    <p style={{ fontSize: '10px', color: '#8a9199' }}>
-                      {d.category && `${d.category} · `}Uploaded by {d.uploaded_by}
+
+                  {/* File info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {d.title}
                     </p>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '9px', background: '#FBE7EA', color: '#A50021', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                        {d.file_type?.toUpperCase() || 'FILE'}
+                      </span>
+                      {d.category && (
+                        <span style={{ fontSize: '10px', color: '#8a9199' }}>{d.category}</span>
+                      )}
+                      <span style={{ fontSize: '10px', color: '#8a9199' }}>
+                        By {d.uploaded_by} · {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{
-                      padding: '5px 12px', background: '#A50021', color: '#fff',
-                      border: 'none', borderRadius: '5px', fontSize: '11px',
-                      fontWeight: 700, cursor: 'pointer',
-                      fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                    }}>
-                      Open
-                    </button>
-                    <button style={{
-                      padding: '5px 10px', background: '#ffffff', color: '#323E48',
-                      border: '1px solid #CCCCCC', borderRadius: '5px',
-                      fontSize: '11px', cursor: 'pointer'
-                    }}>
-                      ⬇️
-                    </button>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    
+                      href={`/api/documents/download?file=${d.file_url?.split('/').pop()}`}
+                      style={{
+                        padding: '6px 14px', background: '#A50021', color: '#fff',
+                        border: 'none', borderRadius: '5px', fontSize: '11px',
+                        fontWeight: 700, cursor: 'pointer', textDecoration: 'none',
+                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase',
+                        display: 'inline-block'
+                      }}
+                    >
+                      ⬇️ Download
+                    </a>
                   </div>
                 </div>
               ))}
             </div>
-            <button style={{
-              width: '100%', padding: '14px', background: 'transparent',
-              border: '2px dashed #A50021', borderRadius: '8px',
-              fontSize: '12px', color: '#A50021', cursor: 'pointer',
-              fontFamily: 'Oswald, sans-serif', fontWeight: 600,
-              textTransform: 'uppercase', letterSpacing: '.3px'
-            }}>
-              + Upload Document
-            </button>
           </div>
         )}
 
