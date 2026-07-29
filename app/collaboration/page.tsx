@@ -47,6 +47,14 @@ export default function CollaborationHub() {
     return colors[name.charCodeAt(0) % colors.length]
   }
 
+  const fileIcon = (type: string) => {
+    if (type === 'pdf') return '📕'
+    if (type?.match(/xlsx?/)) return '📗'
+    if (type?.match(/docx?/)) return '📘'
+    if (type?.match(/pptx?/)) return '📙'
+    return '📄'
+  }
+
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
 
@@ -76,7 +84,7 @@ export default function CollaborationHub() {
           {[
             { label: 'Announcements', value: data?.announcements?.length || 0, tab: 'announcements' },
             { label: 'Meeting Notes', value: data?.meetingNotes?.length || 0, tab: 'meetings' },
-            { label: 'Documents', value: data?.documents?.length || 0, tab: 'documents' },
+            { label: 'Documents', value: documents.length, tab: 'documents' },
             { label: 'Team Members', value: data?.team?.length || 0, tab: 'team' },
             { label: 'Discussions', value: data?.discussions?.length || 0, tab: 'discussions' },
           ].map((k, i) => (
@@ -113,12 +121,9 @@ export default function CollaborationHub() {
 
         {/* Tab bar */}
         <div style={{
-          display: 'flex',
-          borderBottom: '1px solid #CCCCCC',
-          marginBottom: '20px',
-          background: '#ffffff',
-          borderRadius: '8px 8px 0 0',
-          overflow: 'hidden'
+          display: 'flex', borderBottom: '1px solid #CCCCCC',
+          marginBottom: '20px', background: '#ffffff',
+          borderRadius: '8px 8px 0 0', overflow: 'hidden'
         }}>
           {tabs.map(t => (
             <button
@@ -151,20 +156,14 @@ export default function CollaborationHub() {
               </div>
             ) : data?.announcements?.map((a: any) => (
               <div key={a.id} style={{
-                background: '#ffffff',
-                border: '2px solid #A50021',
-                borderLeft: '5px solid #A50021',
-                borderRadius: '8px', padding: '18px 20px',
-                boxShadow: '0 2px 8px rgba(165,0,33,0.10)'
+                background: '#ffffff', border: '2px solid #A50021',
+                borderLeft: '5px solid #A50021', borderRadius: '8px',
+                padding: '18px 20px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {a.is_pinned && (
-                      <span style={{
-                        fontSize: '9px', background: '#A50021', color: '#fff',
-                        padding: '2px 7px', borderRadius: '3px', fontWeight: 700,
-                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                      }}>
+                      <span style={{ fontSize: '9px', background: '#A50021', color: '#fff', padding: '2px 7px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                         Pinned
                       </span>
                     )}
@@ -184,8 +183,7 @@ export default function CollaborationHub() {
                     width: '24px', height: '24px', borderRadius: '50%',
                     background: avatarColor(a.author),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '9px', fontWeight: 700, color: '#fff',
-                    fontFamily: 'Oswald, sans-serif'
+                    fontSize: '9px', fontWeight: 700, color: '#fff', fontFamily: 'Oswald, sans-serif'
                   }}>
                     {initials(a.author)}
                   </div>
@@ -215,10 +213,8 @@ export default function CollaborationHub() {
               </div>
             ) : data?.meetingNotes?.map((m: any) => (
               <div key={m.id} style={{
-                background: '#ffffff',
-                border: '2px solid #A50021',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
+                background: '#ffffff', border: '2px solid #A50021',
+                borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
                 overflow: 'hidden'
               }}>
                 <button
@@ -299,19 +295,10 @@ export default function CollaborationHub() {
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #FBE7EA' }}>
-                      <button style={{
-                        padding: '6px 14px', background: '#A50021', color: '#fff',
-                        border: 'none', borderRadius: '5px', fontSize: '11px',
-                        fontWeight: 700, cursor: 'pointer',
-                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                      }}>
+                      <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                         View Full Notes
                       </button>
-                      <button style={{
-                        padding: '6px 14px', background: '#ffffff', color: '#323E48',
-                        border: '1px solid #CCCCCC', borderRadius: '5px',
-                        fontSize: '11px', fontWeight: 600, cursor: 'pointer'
-                      }}>
+                      <button style={{ padding: '6px 14px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                         ⬇️ Download
                       </button>
                     </div>
@@ -331,15 +318,13 @@ export default function CollaborationHub() {
           </div>
         )}
 
-       {/* ── SHARED DOCUMENTS ── */}
+        {/* ── SHARED DOCUMENTS ── */}
         {activeTab === 'documents' && (
           <div>
             <div style={{
-              background: '#ffffff',
-              border: '2px solid #A50021',
+              background: '#ffffff', border: '2px solid #A50021',
               borderRadius: '8px', overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-              marginBottom: '12px'
+              boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '12px'
             }}>
               {/* Header with upload button */}
               <div style={{
@@ -352,7 +337,7 @@ export default function CollaborationHub() {
                 </p>
                 <UploadButton
                   uploadedBy="Portal User"
-                  onUploadComplete={(doc) => setDocuments(prev => [doc, ...prev])}
+                  onUploadComplete={(doc) => setDocuments((prev: any[]) => [doc, ...prev])}
                 />
               </div>
 
@@ -363,7 +348,7 @@ export default function CollaborationHub() {
                   <p style={{ fontSize: '14px', fontWeight: 600, color: '#323E48', marginBottom: '6px', fontFamily: 'Oswald, sans-serif' }}>
                     No documents yet
                   </p>
-                  <p style={{ fontSize: '12px', color: '#697077', marginBottom: '20px' }}>
+                  <p style={{ fontSize: '12px', color: '#697077' }}>
                     Upload your first document using the button above
                   </p>
                 </div>
@@ -374,20 +359,14 @@ export default function CollaborationHub() {
                   borderBottom: i < documents.length - 1 ? '1px solid #EAECEE' : 'none',
                   background: i % 2 === 0 ? '#ffffff' : '#F4F5F6'
                 }}>
-                  {/* File type icon */}
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '6px',
                     background: '#FBE7EA', color: '#A50021',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '20px', flexShrink: 0
                   }}>
-                    {d.file_type === 'pdf' ? '📕' :
-                     d.file_type?.match(/xlsx?/) ? '📗' :
-                     d.file_type?.match(/docx?/) ? '📘' :
-                     d.file_type?.match(/pptx?/) ? '📙' : '📄'}
+                    {fileIcon(d.file_type)}
                   </div>
-
-                  {/* File info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {d.title}
@@ -404,21 +383,18 @@ export default function CollaborationHub() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Actions */}
                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                    
-                      href={`/api/documents/download?file=${d.file_url?.split('/').pop()}`}
+                    <button
+                      onClick={() => window.open(`/api/documents/download?file=${d.file_url?.split('/').pop()}`, '_blank')}
                       style={{
                         padding: '6px 14px', background: '#A50021', color: '#fff',
                         border: 'none', borderRadius: '5px', fontSize: '11px',
-                        fontWeight: 700, cursor: 'pointer', textDecoration: 'none',
-                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase',
-                        display: 'inline-block'
+                        fontWeight: 700, cursor: 'pointer',
+                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
                       }}
                     >
                       ⬇️ Download
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -435,19 +411,16 @@ export default function CollaborationHub() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
               {data?.team?.filter((m: any) => m.is_ps_team).map((member: any) => (
                 <div key={member.id} style={{
-                  background: '#ffffff',
-                  border: '2px solid #A50021',
-                  borderLeft: '5px solid #A50021',
-                  borderRadius: '8px', padding: '18px 20px',
-                  boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
+                  background: '#ffffff', border: '2px solid #A50021',
+                  borderLeft: '5px solid #A50021', borderRadius: '8px',
+                  padding: '18px 20px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
                   display: 'flex', alignItems: 'flex-start', gap: '14px'
                 }}>
                   <div style={{
                     width: '42px', height: '42px', borderRadius: '50%',
-                    background: '#1F3864',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                    fontFamily: 'Oswald, sans-serif'
+                    background: '#1F3864', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: '13px', fontWeight: 700,
+                    color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif'
                   }}>
                     {initials(member.name)}
                   </div>
@@ -462,19 +435,10 @@ export default function CollaborationHub() {
                       </a>
                     )}
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{
-                        padding: '5px 12px', background: '#A50021', color: '#fff',
-                        border: 'none', borderRadius: '5px', fontSize: '10px',
-                        fontWeight: 700, cursor: 'pointer',
-                        fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                      }}>
+                      <button style={{ padding: '5px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                         Message
                       </button>
-                      <button style={{
-                        padding: '5px 12px', background: '#ffffff', color: '#323E48',
-                        border: '1px solid #CCCCCC', borderRadius: '5px',
-                        fontSize: '10px', fontWeight: 600, cursor: 'pointer'
-                      }}>
+                      <button style={{ padding: '5px 12px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>
                         📅 Schedule
                       </button>
                     </div>
@@ -491,8 +455,7 @@ export default function CollaborationHub() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {data?.team?.filter((m: any) => !m.is_ps_team).map((member: any) => (
                     <div key={member.id} style={{
-                      background: '#ffffff',
-                      border: '2px solid #A50021',
+                      background: '#ffffff', border: '2px solid #A50021',
                       borderRadius: '8px', padding: '16px 18px',
                       boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
                       display: 'flex', alignItems: 'center', gap: '12px'
@@ -527,11 +490,9 @@ export default function CollaborationHub() {
         {activeTab === 'discussions' && (
           <div>
             <div style={{
-              background: '#ffffff',
-              border: '2px solid #A50021',
+              background: '#ffffff', border: '2px solid #A50021',
               borderRadius: '8px', padding: '16px 20px',
-              boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
-              marginBottom: '16px'
+              boxShadow: '0 2px 8px rgba(165,0,33,0.10)', marginBottom: '16px'
             }}>
               <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '8px' }}>
                 Start a New Discussion
@@ -570,11 +531,9 @@ export default function CollaborationHub() {
                 </div>
               ) : data?.discussions?.map((d: any) => (
                 <div key={d.id} style={{
-                  background: '#ffffff',
-                  border: '2px solid #A50021',
+                  background: '#ffffff', border: '2px solid #A50021',
                   borderLeft: d.is_pinned ? '5px solid #A50021' : '2px solid #A50021',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
+                  borderRadius: '8px', boxShadow: '0 2px 8px rgba(165,0,33,0.10)',
                   overflow: 'hidden'
                 }}>
                   <button
@@ -597,11 +556,7 @@ export default function CollaborationHub() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         {d.is_pinned && (
-                          <span style={{
-                            fontSize: '9px', background: '#A50021', color: '#fff',
-                            padding: '2px 6px', borderRadius: '3px', fontWeight: 700,
-                            fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                          }}>
+                          <span style={{ fontSize: '9px', background: '#A50021', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                             Pinned
                           </span>
                         )}
@@ -640,17 +595,11 @@ export default function CollaborationHub() {
                             width: '100%', padding: '8px 12px', fontSize: '11px',
                             border: '1px solid #A50021', borderRadius: '5px',
                             resize: 'none', height: '60px', color: '#323E48',
-                            outline: 'none', fontFamily: 'Roboto, sans-serif',
-                            background: '#fff'
+                            outline: 'none', fontFamily: 'Roboto, sans-serif', background: '#fff'
                           }}
                         />
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                          <button style={{
-                            padding: '5px 14px', background: '#A50021', color: '#fff',
-                            border: 'none', borderRadius: '5px', fontSize: '11px',
-                            fontWeight: 700, cursor: 'pointer',
-                            fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase'
-                          }}>
+                          <button style={{ padding: '5px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
                             Reply
                           </button>
                         </div>
