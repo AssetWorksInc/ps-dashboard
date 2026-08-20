@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import pool from '@/lib/db'
 
-const UPLOAD_DIR = '/var/www/ps-portal/uploads'
+const UPLOAD_DIR = '/mnt/s3files/documents'
 
 export async function POST(req: NextRequest) {
   try {
