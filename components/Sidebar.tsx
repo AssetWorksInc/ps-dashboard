@@ -1,8 +1,7 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
+import NotificationBell from './NotificationBell'
 const nav = [
   { label: 'Dashboard', href: '/', icon: '📊' },
   { label: 'Project Center', href: '/projects', icon: '📂' },
@@ -10,7 +9,6 @@ const nav = [
   { label: 'Training & Learning', href: '/training', icon: '🎓' },
   { label: 'Collaboration Hub', href: '/collaboration', icon: '🤝' },
 ]
-
 export default function Sidebar() {
   const pathname = usePathname()
   return (
@@ -25,37 +23,41 @@ export default function Sidebar() {
       flexDirection: 'column',
       overflowY: 'auto'
     }}>
-
       {/* Logo */}
       <div style={{
         padding: '20px 18px',
-        borderBottom: '3px solid #A50021'
+        borderBottom: '3px solid #A50021',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start'
       }}>
-        <div style={{
-          fontSize: '9px',
-          letterSpacing: '2px',
-          textTransform: 'uppercase',
-          color: '#A50021',
-          fontWeight: 700,
-          marginBottom: '3px',
-          fontFamily: 'Oswald, sans-serif'
-        }}>
-          PS Portal
+        <div>
+          <div style={{
+            fontSize: '9px',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            color: '#A50021',
+            fontWeight: 700,
+            marginBottom: '3px',
+            fontFamily: 'Oswald, sans-serif'
+          }}>
+            PS Portal
+          </div>
+          <div style={{
+            fontSize: '15px',
+            fontWeight: 700,
+            color: '#ffffff',
+            fontFamily: 'Oswald, sans-serif',
+            letterSpacing: '0.3px'
+          }}>
+            AssetWorks
+          </div>
+          <div style={{ fontSize: '10px', color: '#8a9199', marginTop: '2px' }}>
+            Professional Services
+          </div>
         </div>
-        <div style={{
-          fontSize: '15px',
-          fontWeight: 700,
-          color: '#ffffff',
-          fontFamily: 'Oswald, sans-serif',
-          letterSpacing: '0.3px'
-        }}>
-          AssetWorks
-        </div>
-        <div style={{ fontSize: '10px', color: '#8a9199', marginTop: '2px' }}>
-          Professional Services
-        </div>
+        <NotificationBell />
       </div>
-
       {/* Nav */}
       <nav style={{ flex: 1, padding: '8px 0' }}>
         {nav.map(item => {
@@ -85,7 +87,6 @@ export default function Sidebar() {
           )
         })}
       </nav>
-
       {/* User footer */}
       <div style={{
         padding: '14px 18px',
@@ -118,7 +119,6 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-
     </aside>
   )
 }
