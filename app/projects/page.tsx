@@ -1262,7 +1262,7 @@ export default function ProjectCenter() {
                             </p>
                           </div>
                           <a
-                            href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop())}`}
+                            href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop() || '')}`}
                             style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
                           >
                             Download
