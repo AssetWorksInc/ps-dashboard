@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import NotificationBell from './NotificationBell'
+import LogoutButton from './LogoutButton'
 const nav = [
   { label: 'Dashboard', href: '/', icon: '📊' },
   { label: 'Project Center', href: '/projects', icon: '📂' },
@@ -23,6 +24,7 @@ export default function Sidebar() {
       flexDirection: 'column',
       overflowY: 'auto'
     }}>
+      <LogoutButton />
       {/* Logo */}
       <div style={{
         padding: '20px 18px',
