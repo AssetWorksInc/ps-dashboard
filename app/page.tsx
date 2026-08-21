@@ -96,9 +96,6 @@ export default function Dashboard() {
       {/* Page body */}
       <div style={{ padding: '24px 28px 60px' }}>
 
-      {/* Page body */}
-      <div style={{ padding: '24px 28px 60px' }}>
-
         {/* Status strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '16px', marginBottom: '24px' }}>
 
