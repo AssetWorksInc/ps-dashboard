@@ -63,6 +63,13 @@ export async function GET() {
        ORDER BY project_id, sort_order ASC, created_at ASC`,
       [user.tenantId]
     )
+    const documents = await pool.query(
+      `SELECT id, project_id, title, description, file_url, file_type, category, uploaded_by, created_at
+       FROM shared_documents
+       WHERE tenant_id = $1
+       ORDER BY created_at DESC`,
+      [user.tenantId]
+    )
     return NextResponse.json({
       isAdmin: user.role === 'admin',
       projects: projects.rows,
@@ -71,7 +78,8 @@ export async function GET() {
       appointments: appointments.rows,
       budgetLineItems: budgetLineItems.rows,
       billingCharges: billingCharges.rows,
-      sopItems: sopItems.rows
+      sopItems: sopItems.rows,
+      documents: documents.rows
     })
   } catch (error) {
     return NextResponse.json(
