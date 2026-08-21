@@ -93,29 +93,6 @@ export default function Dashboard() {
             Professional Services Portal · Customer view
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => router.push('/collaboration')}
-            style={{
-              background: 'transparent', color: '#A50021', border: '2px solid #A50021',
-              fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '13px',
-              borderRadius: '6px', padding: '7px 16px', cursor: 'pointer'
-            }}
-          >
-            Contact PS Team
-          </button>
-          <button
-            onClick={() => router.push('/projects')}
-            style={{
-              background: '#A50021', color: '#ffffff', border: 'none',
-              fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '13px',
-              borderRadius: '6px', padding: '7px 16px', cursor: 'pointer'
-            }}
-          >
-            Schedule Meeting
-          </button>
-        </div>
-      </div>
 
       {/* Page body */}
       <div style={{ padding: '24px 28px 60px' }}>
