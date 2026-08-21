@@ -1,7 +1,5 @@
 'use client'
-
 import { useEffect, useState } from 'react'
-
 export default function ProjectCenter() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -9,17 +7,51 @@ export default function ProjectCenter() {
   const [activeTab, setActiveTab] = useState('status')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
+  const [showNewProject, setShowNewProject] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
 
-  useEffect(() => {
-    fetch('/api/projects')
+  function loadProjects() {
+    return fetch('/api/projects')
       .then(r => r.json())
       .then(d => {
         setData(d)
+        return d
+      })
+  }
+
+  useEffect(() => {
+    loadProjects()
+      .then(d => {
         if (d.projects?.length > 0) setSelectedProject(d.projects[0])
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [])
+
+  const isAdmin = !!data?.isAdmin
+
+  async function createProject() {
+    if (!newProject.name.trim()) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProject),
+      })
+      const result = await res.json()
+      if (result.success) {
+        const d = await loadProjects()
+        const created = d.projects?.find((p: any) => p.id === result.project.id)
+        setSelectedProject(created || result.project)
+        setShowNewProject(false)
+        setNewProject({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'Roboto, sans-serif' }}>
@@ -27,14 +59,12 @@ export default function ProjectCenter() {
       <p style={{ color: '#697077', marginTop: '12px' }}>Loading projects...</p>
     </div>
   )
-
   const hColor = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#8a6400' : '#A50021'
   const hBg = (h: string) => h === 'green' ? '#E7F3E8' : h === 'amber' ? '#FDF3DC' : '#FBE7EA'
   const hDot = (h: string) => h === 'green' ? '#2E7D32' : h === 'amber' ? '#F2A900' : '#A50021'
   const hLabel = (h: string) => h === 'green' ? 'On Track' : h === 'amber' ? 'At Risk' : 'Critical'
   const sColor = (s: string) => s === 'done' ? '#2E7D32' : s === 'in-progress' ? '#A50021' : s === 'scheduled' ? '#00538C' : '#8a6400'
   const sBg = (s: string) => s === 'done' ? '#E7F3E8' : s === 'in-progress' ? '#FBE7EA' : s === 'scheduled' ? '#E9F1F7' : '#FDF3DC'
-
   const pill = (h: string) => (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -47,18 +77,15 @@ export default function ProjectCenter() {
       {hLabel(h)}
     </span>
   )
-
   const deliverables = data?.deliverables?.filter((d: any) => d.project_id === selectedProject?.id) || []
   const contacts = data?.contacts?.filter((c: any) => c.project_id === selectedProject?.id) || []
   const appointments = data?.appointments?.filter((a: any) => a.project_id === selectedProject?.id) || []
-
   const tabs = [
     { id: 'status', label: 'Project Status' },
     { id: 'deliverables', label: 'Deliverables' },
     { id: 'contacts', label: 'Key Contacts' },
     { id: 'schedule', label: 'Schedule' },
   ]
-
   const handleSave = async (health: string, status: string) => {
     setSaving(true)
     setSaveMessage(null)
@@ -87,10 +114,8 @@ export default function ProjectCenter() {
     }
     setSaving(false)
   }
-
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
-
       {/* Top bar */}
       <div style={{
         background: '#ffffff',
@@ -114,9 +139,7 @@ export default function ProjectCenter() {
           </span>
         </div>
       </div>
-
       <div style={{ padding: '24px 28px 60px' }}>
-
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
           {[
@@ -140,10 +163,8 @@ export default function ProjectCenter() {
             </div>
           ))}
         </div>
-
         {/* Split panel */}
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px' }}>
-
           {/* Left — engagement list */}
           <div style={{
             background: '#ffffff', border: '1px solid #CCCCCC',
@@ -153,12 +174,86 @@ export default function ProjectCenter() {
             <div style={{
               padding: '12px 16px',
               background: '#323E48',
-              borderBottom: '1px solid #CCCCCC'
+              borderBottom: '1px solid #CCCCCC',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
             }}>
-              <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 600, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>
                 Active Engagements
               </p>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowNewProject(!showNewProject)}
+                  style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif' }}
+                >
+                  + New
+                </button>
+              )}
             </div>
+            {showNewProject && (
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid #EAECEE', background: '#F4F5F6', display: 'grid', gap: '8px' }}>
+                <input
+                  placeholder="Project name*"
+                  value={newProject.name}
+                  onChange={e => setNewProject({ ...newProject, name: e.target.value })}
+                  style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                  autoFocus
+                />
+                <input
+                  placeholder="Description"
+                  value={newProject.description}
+                  onChange={e => setNewProject({ ...newProject, description: e.target.value })}
+                  style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                />
+                <input
+                  placeholder="PM name"
+                  value={newProject.pm_name}
+                  onChange={e => setNewProject({ ...newProject, pm_name: e.target.value })}
+                  style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <input
+                    type="date"
+                    value={newProject.start_date}
+                    onChange={e => setNewProject({ ...newProject, start_date: e.target.value })}
+                    style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                  />
+                  <input
+                    type="date"
+                    value={newProject.end_date}
+                    onChange={e => setNewProject({ ...newProject, end_date: e.target.value })}
+                    style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={createProject}
+                    disabled={creating || !newProject.name.trim()}
+                    style={{ flex: 1, padding: '7px', background: creating ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: creating ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {creating ? 'Creating...' : 'Create Project'}
+                  </button>
+                  <button
+                    onClick={() => setShowNewProject(false)}
+                    style={{ padding: '7px 12px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {(!data?.projects || data.projects.length === 0) && !showNewProject && (
+              <div style={{ padding: '30px 16px', textAlign: 'center' }}>
+                <p style={{ fontSize: '12px', color: '#8a9199', marginBottom: '10px' }}>No projects yet.</p>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowNewProject(true)}
+                    style={{ padding: '7px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    + Create First Project
+                  </button>
+                )}
+              </div>
+            )}
             {data?.projects?.map((p: any) => (
               <button
                 key={p.id}
@@ -196,7 +291,6 @@ export default function ProjectCenter() {
               </button>
             ))}
           </div>
-
           {/* Right — detail panel */}
           {selectedProject && (
             <div style={{
@@ -204,7 +298,6 @@ export default function ProjectCenter() {
               borderRadius: '8px', boxShadow: '0 1px 3px rgba(50,62,72,.08)',
               overflow: 'hidden'
             }}>
-
               {/* Project header */}
               <div style={{
                 padding: '18px 22px',
@@ -230,7 +323,6 @@ export default function ProjectCenter() {
                   </div>
                 </div>
               </div>
-
               {/* Tab bar */}
               <div style={{ display: 'flex', borderBottom: '1px solid #CCCCCC', background: '#F4F5F6' }}>
                 {tabs.map(t => (
@@ -251,10 +343,8 @@ export default function ProjectCenter() {
                   </button>
                 ))}
               </div>
-
               {/* Tab content */}
               <div style={{ padding: '20px 22px' }}>
-
                 {/* STATUS */}
                 {activeTab === 'status' && (
                   <div>
@@ -354,7 +444,6 @@ export default function ProjectCenter() {
                     </div>
                   </div>
                 )}
-
                 {/* DELIVERABLES */}
                 {activeTab === 'deliverables' && (
                   <div>
@@ -420,7 +509,6 @@ export default function ProjectCenter() {
                     </table>
                   </div>
                 )}
-
                 {/* CONTACTS */}
                 {activeTab === 'contacts' && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -462,7 +550,6 @@ export default function ProjectCenter() {
                     ))}
                   </div>
                 )}
-
                 {/* SCHEDULE */}
                 {activeTab === 'schedule' && (
                   <div>
@@ -504,7 +591,6 @@ export default function ProjectCenter() {
                     ))}
                   </div>
                 )}
-
               </div>
             </div>
           )}
