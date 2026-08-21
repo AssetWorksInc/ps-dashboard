@@ -24,6 +24,12 @@ export default function ProjectCenter() {
   const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
   const [chargeDraft, setChargeDraft] = useState<any>({})
 
+  // SOP checklist tab state
+  const [addingSopItem, setAddingSopItem] = useState(false)
+  const [newSopItem, setNewSopItem] = useState({ title: '', description: '', due_date: '' })
+  const [editingSopItemId, setEditingSopItemId] = useState<string | null>(null)
+  const [sopItemDraft, setSopItemDraft] = useState<any>({})
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -91,11 +97,17 @@ export default function ProjectCenter() {
     </span>
   )
   const fmtMoney = (n: number) => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+  const sopColor = (s: string) => s === 'complete' ? '#2E7D32' : s === 'in-progress' ? '#A50021' : '#8a6400'
+  const sopBg = (s: string) => s === 'complete' ? '#E7F3E8' : s === 'in-progress' ? '#FBE7EA' : '#FDF3DC'
+  const sopLabel = (s: string) => s === 'complete' ? 'Complete' : s === 'in-progress' ? 'In Progress' : 'Not Started'
   const deliverables = data?.deliverables?.filter((d: any) => d.project_id === selectedProject?.id) || []
   const contacts = data?.contacts?.filter((c: any) => c.project_id === selectedProject?.id) || []
   const appointments = data?.appointments?.filter((a: any) => a.project_id === selectedProject?.id) || []
   const lineItems = data?.budgetLineItems?.filter((li: any) => li.project_id === selectedProject?.id) || []
   const charges = data?.billingCharges?.filter((c: any) => c.project_id === selectedProject?.id) || []
+  const sopItems = data?.sopItems?.filter((s: any) => s.project_id === selectedProject?.id) || []
+  const sopCompleteCount = sopItems.filter((s: any) => s.status === 'complete').length
+  const sopPct = sopItems.length > 0 ? Math.round((sopCompleteCount / sopItems.length) * 100) : 0
   const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
   const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
   const hoursUsed = lineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
@@ -109,6 +121,7 @@ export default function ProjectCenter() {
     { id: 'status', label: 'Project Status' },
     { id: 'deliverables', label: 'Deliverables' },
     { id: 'budget', label: 'Budget' },
+    { id: 'sop', label: 'SOP Checklist' },
     { id: 'contacts', label: 'Key Contacts' },
     { id: 'schedule', label: 'Schedule' },
   ]
@@ -253,6 +266,61 @@ export default function ProjectCenter() {
   async function deleteCharge(id: string) {
     if (!confirm('Delete this billing charge?')) return
     const res = await fetch(`/api/billing-charges/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function toggleSopItem(item: any) {
+    const nextStatus = item.status === 'complete' ? 'not-started' : 'complete'
+    const res = await fetch(`/api/sop-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus }),
+    })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function createSopItem() {
+    if (!newSopItem.title.trim()) return
+    const res = await fetch('/api/sop-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        title: newSopItem.title,
+        description: newSopItem.description || null,
+        due_date: newSopItem.due_date || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingSopItem(false)
+      setNewSopItem({ title: '', description: '', due_date: '' })
+    }
+  }
+
+  async function saveSopItem(id: string) {
+    const res = await fetch(`/api/sop-items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: sopItemDraft.title,
+        description: sopItemDraft.description || null,
+        due_date: sopItemDraft.due_date || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingSopItemId(null)
+    }
+  }
+
+  async function deleteSopItem(id: string) {
+    if (!confirm('Delete this checklist item?')) return
+    const res = await fetch(`/api/sop-items/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -943,6 +1011,156 @@ export default function ProjectCenter() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                {/* SOP CHECKLIST */}
+                {activeTab === 'sop' && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '10px', color: '#8a9199', fontWeight: 600 }}>
+                        Checklist Progress — {sopCompleteCount} of {sopItems.length} complete ({sopPct}%)
+                      </span>
+                      {isAdmin && !addingSopItem && (
+                        <button
+                          onClick={() => setAddingSopItem(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Item
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ height: '8px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden', marginBottom: '18px' }}>
+                      <div style={{ height: '100%', width: `${sopPct}%`, background: '#2E7D32', borderRadius: '4px' }} />
+                    </div>
+                    {addingSopItem && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <input
+                          placeholder="Checklist item title*"
+                          value={newSopItem.title}
+                          onChange={e => setNewSopItem({ ...newSopItem, title: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          autoFocus
+                        />
+                        <input
+                          placeholder="Description (optional)"
+                          value={newSopItem.description}
+                          onChange={e => setNewSopItem({ ...newSopItem, description: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                        />
+                        <input
+                          type="date"
+                          value={newSopItem.due_date}
+                          onChange={e => setNewSopItem({ ...newSopItem, due_date: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                        />
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createSopItem}
+                            disabled={!newSopItem.title.trim()}
+                            style={{ padding: '7px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingSopItem(false); setNewSopItem({ title: '', description: '', due_date: '' }) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {sopItems.length === 0 ? (
+                      <p style={{ fontSize: '13px', color: '#697077', textAlign: 'center', padding: '40px' }}>
+                        No SOP checklist items yet.
+                      </p>
+                    ) : sopItems.map((s: any, i: number) => (
+                      <div key={s.id} style={{
+                        display: 'flex', gap: '12px', padding: '12px 4px',
+                        borderBottom: i < sopItems.length - 1 ? '1px solid #EAECEE' : 'none',
+                        alignItems: 'flex-start'
+                      }}>
+                        {editingSopItemId === s.id ? (
+                          <div style={{ flex: 1, display: 'grid', gap: '8px' }}>
+                            <input
+                              value={sopItemDraft.title}
+                              onChange={e => setSopItemDraft({ ...sopItemDraft, title: e.target.value })}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                            <input
+                              placeholder="Description"
+                              value={sopItemDraft.description || ''}
+                              onChange={e => setSopItemDraft({ ...sopItemDraft, description: e.target.value })}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                            <input
+                              type="date"
+                              value={sopItemDraft.due_date ? String(sopItemDraft.due_date).slice(0, 10) : ''}
+                              onChange={e => setSopItemDraft({ ...sopItemDraft, due_date: e.target.value })}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => saveSopItem(s.id)} style={{ padding: '6px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                              <button onClick={() => setEditingSopItemId(null)} style={{ padding: '6px 12px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <input
+                              type="checkbox"
+                              checked={s.status === 'complete'}
+                              onChange={() => toggleSopItem(s)}
+                              disabled={!isAdmin}
+                              style={{ width: '18px', height: '18px', marginTop: '2px', cursor: isAdmin ? 'pointer' : 'default', flexShrink: 0 }}
+                            />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  fontSize: '13px', fontWeight: 600, color: '#323E48',
+                                  textDecoration: s.status === 'complete' ? 'line-through' : 'none',
+                                  opacity: s.status === 'complete' ? 0.7 : 1
+                                }}>
+                                  {s.title}
+                                </span>
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 700, padding: '2px 7px',
+                                  borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '.3px',
+                                  fontFamily: 'Oswald, sans-serif',
+                                  background: sopBg(s.status), color: sopColor(s.status)
+                                }}>
+                                  {sopLabel(s.status)}
+                                </span>
+                              </div>
+                              {s.description && (
+                                <p style={{ fontSize: '11px', color: '#697077', marginTop: '4px' }}>{s.description}</p>
+                              )}
+                              <p style={{ fontSize: '10px', color: '#8a9199', marginTop: '4px' }}>
+                                {s.due_date && <>Due {new Date(s.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · </>}
+                                {s.checked_by && s.checked_at
+                                  ? `Checked by ${s.checked_by} on ${new Date(s.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                  : 'Not yet checked'}
+                              </p>
+                            </div>
+                            {isAdmin && (
+                              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                <button
+                                  onClick={() => { setEditingSopItemId(s.id); setSopItemDraft({ title: s.title, description: s.description, due_date: s.due_date }) }}
+                                  style={{ padding: '4px 10px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteSopItem(s.id)}
+                                  style={{ padding: '4px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 {/* CONTACTS */}
