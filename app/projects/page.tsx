@@ -11,6 +11,19 @@ export default function ProjectCenter() {
   const [creating, setCreating] = useState(false)
   const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
 
+  // Budget tab state
+  const [budgetSaving, setBudgetSaving] = useState(false)
+  const [editingBudgetSettings, setEditingBudgetSettings] = useState(false)
+  const [budgetDraft, setBudgetDraft] = useState<any>({ budget_hours_total: '', hourly_rate: '', budget_status: 'green' })
+  const [addingLineItem, setAddingLineItem] = useState(false)
+  const [newLineItem, setNewLineItem] = useState({ activity_name: '', hours_planned: '', hours_worked: '' })
+  const [editingLineItemId, setEditingLineItemId] = useState<string | null>(null)
+  const [lineItemDraft, setLineItemDraft] = useState<any>({})
+  const [addingCharge, setAddingCharge] = useState(false)
+  const [newCharge, setNewCharge] = useState({ description: '', hours: '', rate: '', amount: '', charge_date: '' })
+  const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
+  const [chargeDraft, setChargeDraft] = useState<any>({})
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -77,12 +90,25 @@ export default function ProjectCenter() {
       {hLabel(h)}
     </span>
   )
+  const fmtMoney = (n: number) => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
   const deliverables = data?.deliverables?.filter((d: any) => d.project_id === selectedProject?.id) || []
   const contacts = data?.contacts?.filter((c: any) => c.project_id === selectedProject?.id) || []
   const appointments = data?.appointments?.filter((a: any) => a.project_id === selectedProject?.id) || []
+  const lineItems = data?.budgetLineItems?.filter((li: any) => li.project_id === selectedProject?.id) || []
+  const charges = data?.billingCharges?.filter((c: any) => c.project_id === selectedProject?.id) || []
+  const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
+  const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
+  const hoursUsed = lineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
+  const hoursRemaining = Math.max(hoursTotal - hoursUsed, 0)
+  const hourlyRate = Number(selectedProject?.hourly_rate) || 0
+  const valueUsed = hoursUsed * hourlyRate
+  const valueRemaining = hoursRemaining * hourlyRate
+  const totalBilled = charges.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0)
+  const pctUsed = hoursTotal > 0 ? Math.min(Math.round((hoursUsed / hoursTotal) * 100), 100) : 0
   const tabs = [
     { id: 'status', label: 'Project Status' },
     { id: 'deliverables', label: 'Deliverables' },
+    { id: 'budget', label: 'Budget' },
     { id: 'contacts', label: 'Key Contacts' },
     { id: 'schedule', label: 'Schedule' },
   ]
@@ -114,6 +140,123 @@ export default function ProjectCenter() {
     }
     setSaving(false)
   }
+
+  async function saveBudgetSettings() {
+    setBudgetSaving(true)
+    try {
+      const res = await fetch(`/api/projects/${selectedProject.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          budget_hours_total: budgetDraft.budget_hours_total === '' ? null : Number(budgetDraft.budget_hours_total),
+          hourly_rate: budgetDraft.hourly_rate === '' ? null : Number(budgetDraft.hourly_rate),
+          budget_status: budgetDraft.budget_status,
+        }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        const d = await loadProjects()
+        const updated = d.projects?.find((p: any) => p.id === selectedProject.id)
+        if (updated) setSelectedProject(updated)
+        setEditingBudgetSettings(false)
+      }
+    } finally {
+      setBudgetSaving(false)
+    }
+  }
+
+  async function createLineItem() {
+    if (!newLineItem.activity_name.trim()) return
+    const res = await fetch('/api/budget-line-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        activity_name: newLineItem.activity_name,
+        hours_planned: newLineItem.hours_planned === '' ? 0 : Number(newLineItem.hours_planned),
+        hours_worked: newLineItem.hours_worked === '' ? 0 : Number(newLineItem.hours_worked),
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingLineItem(false)
+      setNewLineItem({ activity_name: '', hours_planned: '', hours_worked: '' })
+    }
+  }
+
+  async function saveLineItem(id: string) {
+    const res = await fetch(`/api/budget-line-items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        activity_name: lineItemDraft.activity_name,
+        hours_planned: lineItemDraft.hours_planned === '' ? 0 : Number(lineItemDraft.hours_planned),
+        hours_worked: lineItemDraft.hours_worked === '' ? 0 : Number(lineItemDraft.hours_worked),
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingLineItemId(null)
+    }
+  }
+
+  async function deleteLineItem(id: string) {
+    if (!confirm('Delete this budget line item?')) return
+    const res = await fetch(`/api/budget-line-items/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function createCharge() {
+    if (!newCharge.description.trim()) return
+    const res = await fetch('/api/billing-charges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        description: newCharge.description,
+        hours: newCharge.hours === '' ? null : Number(newCharge.hours),
+        rate: newCharge.rate === '' ? null : Number(newCharge.rate),
+        amount: newCharge.amount === '' ? null : Number(newCharge.amount),
+        charge_date: newCharge.charge_date || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingCharge(false)
+      setNewCharge({ description: '', hours: '', rate: '', amount: '', charge_date: '' })
+    }
+  }
+
+  async function saveCharge(id: string) {
+    const res = await fetch(`/api/billing-charges/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: chargeDraft.description,
+        hours: chargeDraft.hours === '' ? null : Number(chargeDraft.hours),
+        rate: chargeDraft.rate === '' ? null : Number(chargeDraft.rate),
+        amount: chargeDraft.amount === '' ? null : Number(chargeDraft.amount),
+        charge_date: chargeDraft.charge_date || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingChargeId(null)
+    }
+  }
+
+  async function deleteCharge(id: string) {
+    if (!confirm('Delete this billing charge?')) return
+    const res = await fetch(`/api/billing-charges/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Top bar */}
@@ -130,7 +273,7 @@ export default function ProjectCenter() {
             Project Center
           </div>
           <div style={{ fontSize: '12px', color: '#697077' }}>
-            Active engagements · deliverables · contacts · schedules
+            Active engagements · deliverables · budget · contacts · schedules
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -503,6 +646,299 @@ export default function ProjectCenter() {
                                 {d.status}
                               </span>
                             </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {/* BUDGET */}
+                {activeTab === 'budget' && (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: '16px' }}>
+                      {[
+                        { label: 'Budgeted Hours', value: hoursTotal.toLocaleString(), color: '#323E48' },
+                        { label: 'Hours Used', value: hoursUsed.toLocaleString(), color: '#00538C' },
+                        { label: 'Hours Remaining', value: hoursRemaining.toLocaleString(), color: '#2E7D32' },
+                        { label: 'Value Used', value: fmtMoney(valueUsed), color: '#8a6400' },
+                        { label: 'Value Remaining', value: fmtMoney(valueRemaining), color: '#2E7D32' },
+                      ].map((k, i) => (
+                        <div key={i} style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px 14px' }}>
+                          <p style={{ fontSize: '9px', color: '#8a9199', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', fontFamily: 'Oswald, sans-serif' }}>{k.label}</p>
+                          <p style={{ fontSize: '15px', fontWeight: 700, color: k.color, fontFamily: 'Oswald, sans-serif' }}>{k.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '10px', color: '#8a9199', fontWeight: 600 }}>Budget Utilization — {pctUsed}%</span>
+                      {pill(selectedProject.budget_status || 'green')}
+                    </div>
+                    <div style={{ height: '8px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' }}>
+                      <div style={{ height: '100%', width: `${pctUsed}%`, background: pctUsed >= 90 ? '#A50021' : pctUsed >= 70 ? '#F2A900' : '#2E7D32', borderRadius: '4px' }} />
+                    </div>
+
+                    {/* Budget settings editor */}
+                    <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '8px', padding: '14px 16px', marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: editingBudgetSettings ? '12px' : 0 }}>
+                        <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, color: '#323E48', textTransform: 'uppercase', letterSpacing: '.5px', margin: 0 }}>
+                          ⚙️ Budget Settings
+                        </p>
+                        {isAdmin && !editingBudgetSettings && (
+                          <button
+                            onClick={() => {
+                              setBudgetDraft({
+                                budget_hours_total: selectedProject.budget_hours_total ?? '',
+                                hourly_rate: selectedProject.hourly_rate ?? '',
+                                budget_status: selectedProject.budget_status || 'green',
+                              })
+                              setEditingBudgetSettings(true)
+                            }}
+                            style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      {editingBudgetSettings ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Total Budgeted Hours</label>
+                            <input
+                              type="number"
+                              value={budgetDraft.budget_hours_total}
+                              onChange={e => setBudgetDraft({ ...budgetDraft, budget_hours_total: e.target.value })}
+                              style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Hourly Rate ($)</label>
+                            <input
+                              type="number"
+                              value={budgetDraft.hourly_rate}
+                              onChange={e => setBudgetDraft({ ...budgetDraft, hourly_rate: e.target.value })}
+                              style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Budget Status</label>
+                            <select
+                              value={budgetDraft.budget_status}
+                              onChange={e => setBudgetDraft({ ...budgetDraft, budget_status: e.target.value })}
+                              style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            >
+                              <option value="green">🟢 On Budget</option>
+                              <option value="amber">🟡 Watch</option>
+                              <option value="red">🔴 Over Budget</option>
+                            </select>
+                          </div>
+                          <div style={{ gridColumn: '1/-1', display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={saveBudgetSettings}
+                              disabled={budgetSaving}
+                              style={{ padding: '7px 14px', background: budgetSaving ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: budgetSaving ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              {budgetSaving ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => setEditingBudgetSettings(false)}
+                              style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '11px', color: '#697077', margin: 0 }}>
+                          {hourlyRate > 0 ? `$${hourlyRate}/hr` : 'No hourly rate set'} · {hoursTotal > 0 ? `${hoursTotal} budgeted hours` : 'No hour budget set'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Line items */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                        Hours by Activity
+                      </h3>
+                      {isAdmin && !addingLineItem && (
+                        <button
+                          onClick={() => setAddingLineItem(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Activity
+                        </button>
+                      )}
+                    </div>
+                    {addingLineItem && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto auto', gap: '8px', alignItems: 'end' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Activity Name</label>
+                          <input value={newLineItem.activity_name} onChange={e => setNewLineItem({ ...newLineItem, activity_name: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} autoFocus />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Planned Hrs</label>
+                          <input type="number" value={newLineItem.hours_planned} onChange={e => setNewLineItem({ ...newLineItem, hours_planned: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Worked Hrs</label>
+                          <input type="number" value={newLineItem.hours_worked} onChange={e => setNewLineItem({ ...newLineItem, hours_worked: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <button onClick={createLineItem} style={{ padding: '7px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}>Add</button>
+                        <button onClick={() => { setAddingLineItem(false); setNewLineItem({ activity_name: '', hours_planned: '', hours_worked: '' }) }} style={{ padding: '7px 12px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    )}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '28px' }}>
+                      <thead>
+                        <tr>
+                          {['Activity', 'Planned Hrs', 'Worked Hrs', 'Remaining', ...(isAdmin ? ['Actions'] : [])].map(h => (
+                            <th key={h} style={{ background: '#323E48', color: '#ffffff', fontFamily: 'Oswald, sans-serif', fontWeight: 600, textAlign: 'left', padding: '8px 10px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lineItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={isAdmin ? 5 : 4} style={{ padding: '20px', textAlign: 'center', color: '#8a9199', fontSize: '12px' }}>
+                              No budget line items yet.
+                            </td>
+                          </tr>
+                        ) : lineItems.map((li: any, i: number) => (
+                          <tr key={li.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#F4F5F6' }}>
+                            {editingLineItemId === li.id ? (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input value={lineItemDraft.activity_name} onChange={e => setLineItemDraft({ ...lineItemDraft, activity_name: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="number" value={lineItemDraft.hours_planned} onChange={e => setLineItemDraft({ ...lineItemDraft, hours_planned: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="number" value={lineItemDraft.hours_worked} onChange={e => setLineItemDraft({ ...lineItemDraft, hours_worked: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
+                                  {(Number(lineItemDraft.hours_planned || 0) - Number(lineItemDraft.hours_worked || 0)).toFixed(1)}
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                  <button onClick={() => saveLineItem(li.id)} style={{ marginRight: '6px', padding: '4px 10px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                                  <button onClick={() => setEditingLineItemId(null)} style={{ padding: '4px 10px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>{li.activity_name}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{Number(li.hours_planned).toFixed(1)}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{Number(li.hours_worked).toFixed(1)}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{(Number(li.hours_planned) - Number(li.hours_worked)).toFixed(1)}</td>
+                                {isAdmin && (
+                                  <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                    <button onClick={() => { setEditingLineItemId(li.id); setLineItemDraft({ activity_name: li.activity_name, hours_planned: li.hours_planned, hours_worked: li.hours_worked }) }} style={{ marginRight: '6px', padding: '4px 10px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={() => deleteLineItem(li.id)} style={{ padding: '4px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Delete</button>
+                                  </td>
+                                )}
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Billing charges */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                        Billing Log — {fmtMoney(totalBilled)} total
+                      </h3>
+                      {isAdmin && !addingCharge && (
+                        <button
+                          onClick={() => setAddingCharge(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Charge
+                        </button>
+                      )}
+                    </div>
+                    {addingCharge && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto auto', gap: '8px', alignItems: 'end' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Description</label>
+                          <input value={newCharge.description} onChange={e => setNewCharge({ ...newCharge, description: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} autoFocus />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Date</label>
+                          <input type="date" value={newCharge.charge_date} onChange={e => setNewCharge({ ...newCharge, charge_date: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Hours</label>
+                          <input type="number" value={newCharge.hours} onChange={e => setNewCharge({ ...newCharge, hours: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Rate ($)</label>
+                          <input type="number" value={newCharge.rate} onChange={e => setNewCharge({ ...newCharge, rate: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Amount ($)</label>
+                          <input type="number" placeholder="auto" value={newCharge.amount} onChange={e => setNewCharge({ ...newCharge, amount: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                        </div>
+                        <button onClick={createCharge} style={{ padding: '7px 12px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}>Add</button>
+                        <button onClick={() => { setAddingCharge(false); setNewCharge({ description: '', hours: '', rate: '', amount: '', charge_date: '' }) }} style={{ padding: '7px 12px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    )}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr>
+                          {['Description', 'Date', 'Hours', 'Rate', 'Amount', ...(isAdmin ? ['Actions'] : [])].map(h => (
+                            <th key={h} style={{ background: '#323E48', color: '#ffffff', fontFamily: 'Oswald, sans-serif', fontWeight: 600, textAlign: 'left', padding: '8px 10px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {charges.length === 0 ? (
+                          <tr>
+                            <td colSpan={isAdmin ? 6 : 5} style={{ padding: '20px', textAlign: 'center', color: '#8a9199', fontSize: '12px' }}>
+                              No billing charges logged yet.
+                            </td>
+                          </tr>
+                        ) : charges.map((c: any, i: number) => (
+                          <tr key={c.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#F4F5F6' }}>
+                            {editingChargeId === c.id ? (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input value={chargeDraft.description} onChange={e => setChargeDraft({ ...chargeDraft, description: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="date" value={chargeDraft.charge_date ? String(chargeDraft.charge_date).slice(0, 10) : ''} onChange={e => setChargeDraft({ ...chargeDraft, charge_date: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="number" value={chargeDraft.hours ?? ''} onChange={e => setChargeDraft({ ...chargeDraft, hours: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="number" value={chargeDraft.rate ?? ''} onChange={e => setChargeDraft({ ...chargeDraft, rate: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="number" value={chargeDraft.amount ?? ''} onChange={e => setChargeDraft({ ...chargeDraft, amount: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                  <button onClick={() => saveCharge(c.id)} style={{ marginRight: '6px', padding: '4px 10px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                                  <button onClick={() => setEditingChargeId(null)} style={{ padding: '4px 10px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>{c.description}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{c.charge_date ? new Date(c.charge_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{c.hours != null ? Number(c.hours).toFixed(1) : '—'}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{c.rate != null ? `$${Number(c.rate).toFixed(2)}` : '—'}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 700 }}>{c.amount != null ? fmtMoney(Number(c.amount)) : '—'}</td>
+                                {isAdmin && (
+                                  <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                    <button onClick={() => { setEditingChargeId(c.id); setChargeDraft({ description: c.description, hours: c.hours, rate: c.rate, amount: c.amount, charge_date: c.charge_date }) }} style={{ marginRight: '6px', padding: '4px 10px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={() => deleteCharge(c.id)} style={{ padding: '4px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Delete</button>
+                                  </td>
+                                )}
+                              </>
+                            )}
                           </tr>
                         ))}
                       </tbody>
