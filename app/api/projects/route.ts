@@ -42,12 +42,28 @@ export async function GET() {
        ORDER BY scheduled_at ASC`,
       [user.tenantId]
     )
+    const budgetLineItems = await pool.query(
+      `SELECT id, project_id, activity_name, hours_planned, hours_worked, sort_order
+       FROM budget_line_items
+       WHERE tenant_id = $1
+       ORDER BY project_id, sort_order ASC, created_at ASC`,
+      [user.tenantId]
+    )
+    const billingCharges = await pool.query(
+      `SELECT id, project_id, description, hours, rate, amount, charge_date, source
+       FROM billing_charges
+       WHERE tenant_id = $1
+       ORDER BY project_id, charge_date DESC NULLS LAST, created_at DESC`,
+      [user.tenantId]
+    )
     return NextResponse.json({
       isAdmin: user.role === 'admin',
       projects: projects.rows,
       deliverables: deliverables.rows,
       contacts: contacts.rows,
-      appointments: appointments.rows
+      appointments: appointments.rows,
+      budgetLineItems: budgetLineItems.rows,
+      billingCharges: billingCharges.rows
     })
   } catch (error) {
     return NextResponse.json(
