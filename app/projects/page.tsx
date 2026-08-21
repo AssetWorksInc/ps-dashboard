@@ -30,6 +30,12 @@ export default function ProjectCenter() {
   const [editingSopItemId, setEditingSopItemId] = useState<string | null>(null)
   const [sopItemDraft, setSopItemDraft] = useState<any>({})
 
+  // SOP reference document attachment state
+  const [addingSopDoc, setAddingSopDoc] = useState(false)
+  const [sopDocTitle, setSopDocTitle] = useState('')
+  const [sopDocFile, setSopDocFile] = useState<File | null>(null)
+  const [uploadingSopDoc, setUploadingSopDoc] = useState(false)
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -108,6 +114,8 @@ export default function ProjectCenter() {
   const sopItems = data?.sopItems?.filter((s: any) => s.project_id === selectedProject?.id) || []
   const sopCompleteCount = sopItems.filter((s: any) => s.status === 'complete').length
   const sopPct = sopItems.length > 0 ? Math.round((sopCompleteCount / sopItems.length) * 100) : 0
+  const sopDocuments = data?.documents?.filter((d: any) => d.project_id === selectedProject?.id && d.category === 'SOP') || []
+  const docIcon = (t: string) => t === 'pdf' ? '📄' : (t === 'doc' || t === 'docx') ? '📝' : (t === 'xls' || t === 'xlsx') ? '📊' : (t === 'ppt' || t === 'pptx') ? '📈' : '📁'
   const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
   const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
   const hoursUsed = lineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
@@ -321,6 +329,39 @@ export default function ProjectCenter() {
   async function deleteSopItem(id: string) {
     if (!confirm('Delete this checklist item?')) return
     const res = await fetch(`/api/sop-items/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function uploadSopDocument() {
+    if (!sopDocFile) return
+    setUploadingSopDoc(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', sopDocFile)
+      formData.append('title', sopDocTitle || sopDocFile.name)
+      formData.append('category', 'SOP')
+      formData.append('project_id', selectedProject.id)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const result = await res.json()
+      if (result.success) {
+        await loadProjects()
+        setAddingSopDoc(false)
+        setSopDocTitle('')
+        setSopDocFile(null)
+      }
+    } finally {
+      setUploadingSopDoc(false)
+    }
+  }
+
+  async function deleteSopDocument(id: string) {
+    if (!confirm('Delete this document?')) return
+    const res = await fetch('/api/documents/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -1161,6 +1202,82 @@ export default function ProjectCenter() {
                         )}
                       </div>
                     ))}
+
+                    {/* Reference documents */}
+                    <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #EAECEE' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                          Reference Documents
+                        </h3>
+                        {isAdmin && !addingSopDoc && (
+                          <button
+                            onClick={() => setAddingSopDoc(true)}
+                            style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                          >
+                            + Attach Document
+                          </button>
+                        )}
+                      </div>
+                      {addingSopDoc && (
+                        <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gap: '8px' }}>
+                          <input
+                            placeholder="Document title (optional — defaults to filename)"
+                            value={sopDocTitle}
+                            onChange={e => setSopDocTitle(e.target.value)}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            type="file"
+                            onChange={e => setSopDocFile(e.target.files?.[0] || null)}
+                            style={{ fontSize: '12px' }}
+                          />
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={uploadSopDocument}
+                              disabled={!sopDocFile || uploadingSopDoc}
+                              style={{ padding: '7px 14px', background: (!sopDocFile || uploadingSopDoc) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: (!sopDocFile || uploadingSopDoc) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              {uploadingSopDoc ? 'Uploading...' : 'Upload'}
+                            </button>
+                            <button
+                              onClick={() => { setAddingSopDoc(false); setSopDocTitle(''); setSopDocFile(null) }}
+                              style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {sopDocuments.length === 0 ? (
+                        <p style={{ fontSize: '12px', color: '#8a9199', textAlign: 'center', padding: '16px' }}>
+                          No SOP reference documents attached yet.
+                        </p>
+                      ) : sopDocuments.map((d: any) => (
+                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid #EAECEE' }}>
+                          <span style={{ fontSize: '20px', flexShrink: 0 }}>{docIcon(d.file_type)}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '12px', fontWeight: 600, color: '#323E48' }}>{d.title}</p>
+                            <p style={{ fontSize: '10px', color: '#8a9199' }}>
+                              Uploaded by {d.uploaded_by} · {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          </div>
+                          <a
+                            href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop())}`}
+                            style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                          >
+                            Download
+                          </a>
+                          {isAdmin && (
+                            <button
+                              onClick={() => deleteSopDocument(d.id)}
+                              style={{ padding: '6px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {/* CONTACTS */}
