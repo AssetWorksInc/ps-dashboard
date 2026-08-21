@@ -72,8 +72,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div style={{ fontFamily: 'Roboto, sans-serif' }}>
-
+        <div style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Top bar */}
       <div style={{
         background: '#ffffff',
@@ -93,6 +92,9 @@ export default function Dashboard() {
             Professional Services Portal · Customer view
           </div>
         </div>
+      </div>
+      {/* Page body */}
+      <div style={{ padding: '24px 28px 60px' }}>
 
       {/* Page body */}
       <div style={{ padding: '24px 28px 60px' }}>
