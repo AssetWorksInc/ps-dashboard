@@ -18,8 +18,8 @@ export async function GET() {
       [user.tenantId]
     )
     const announcements = await pool.query(
-      `SELECT id, title, body, priority, is_pinned, author, created_at
-       FROM announcements
+      `SELECT id, project_id, title, body, author, is_pinned, created_at
+       FROM project_announcements
        WHERE tenant_id = $1
        ORDER BY is_pinned DESC, created_at DESC`,
       [user.tenantId]
