@@ -24,15 +24,11 @@ export async function GET() {
        ORDER BY created_at ASC`,
       [user.tenantId]
     )
-    // Note: project_contacts is scoped via its parent project rather than its
-    // own tenant_id column, since that column's presence on this table isn't
-    // guaranteed by the schema history.
     const contacts = await pool.query(
-      `SELECT pc.id, pc.project_id, pc.name, pc.role, pc.email, pc.is_primary
-       FROM project_contacts pc
-       JOIN projects p ON p.id = pc.project_id
-       WHERE p.tenant_id = $1
-       ORDER BY pc.is_primary DESC`,
+      `SELECT id, project_id, name, role, email, phone, is_primary
+       FROM project_contacts
+       WHERE tenant_id = $1
+       ORDER BY is_primary DESC, created_at ASC`,
       [user.tenantId]
     )
     const appointments = await pool.query(
