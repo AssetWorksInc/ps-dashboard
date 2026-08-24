@@ -42,6 +42,18 @@ export default function ProjectCenter() {
   const [editingApptId, setEditingApptId] = useState<string | null>(null)
   const [apptDraft, setApptDraft] = useState<any>({})
 
+  // Deliverables tab state
+  const [addingDeliverable, setAddingDeliverable] = useState(false)
+  const [newDeliverable, setNewDeliverable] = useState({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' })
+  const [editingDeliverableId, setEditingDeliverableId] = useState<string | null>(null)
+  const [deliverableDraft, setDeliverableDraft] = useState<any>({})
+
+  // Customer Contacts tab state
+  const [addingContact, setAddingContact] = useState(false)
+  const [newContact, setNewContact] = useState({ name: '', role: '', email: '', phone: '', is_primary: false })
+  const [editingContactId, setEditingContactId] = useState<string | null>(null)
+  const [contactDraft, setContactDraft] = useState<any>({})
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -143,7 +155,7 @@ export default function ProjectCenter() {
     { id: 'deliverables', label: 'Deliverables' },
     { id: 'budget', label: 'Budget' },
     { id: 'sop', label: 'SOP Checklist' },
-    { id: 'contacts', label: 'Key Contacts' },
+    { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
   ]
   const handleSave = async (health: string, status: string) => {
@@ -425,6 +437,102 @@ export default function ProjectCenter() {
   async function deleteAppointment(id: string) {
     if (!confirm('Delete this appointment?')) return
     const res = await fetch(`/api/appointments/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function createDeliverable() {
+    if (!newDeliverable.name.trim() || !newDeliverable.category.trim()) return
+    const res = await fetch('/api/deliverables', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        name: newDeliverable.name,
+        category: newDeliverable.category,
+        owner: newDeliverable.owner || null,
+        due_date: newDeliverable.due_date || null,
+        status: newDeliverable.status || 'upcoming',
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingDeliverable(false)
+      setNewDeliverable({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' })
+    }
+  }
+
+  async function saveDeliverable(id: string) {
+    const res = await fetch(`/api/deliverables/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: deliverableDraft.name,
+        category: deliverableDraft.category,
+        owner: deliverableDraft.owner || null,
+        due_date: deliverableDraft.due_date || null,
+        status: deliverableDraft.status,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingDeliverableId(null)
+    }
+  }
+
+  async function deleteDeliverable(id: string) {
+    if (!confirm('Delete this deliverable?')) return
+    const res = await fetch(`/api/deliverables/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function createContact() {
+    if (!newContact.name.trim()) return
+    const res = await fetch('/api/project-contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        name: newContact.name,
+        role: newContact.role || null,
+        email: newContact.email || null,
+        phone: newContact.phone || null,
+        is_primary: newContact.is_primary,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingContact(false)
+      setNewContact({ name: '', role: '', email: '', phone: '', is_primary: false })
+    }
+  }
+
+  async function saveContact(id: string) {
+    const res = await fetch(`/api/project-contacts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: contactDraft.name,
+        role: contactDraft.role || null,
+        email: contactDraft.email || null,
+        phone: contactDraft.phone || null,
+        is_primary: !!contactDraft.is_primary,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingContactId(null)
+    }
+  }
+
+  async function deleteContact(id: string) {
+    if (!confirm('Delete this contact?')) return
+    const res = await fetch(`/api/project-contacts/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -762,10 +870,78 @@ export default function ProjectCenter() {
                 {/* DELIVERABLES */}
                 {activeTab === 'deliverables' && (
                   <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      {isAdmin && !addingDeliverable && (
+                        <button
+                          onClick={() => setAddingDeliverable(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Deliverable
+                        </button>
+                      )}
+                    </div>
+                    {addingDeliverable && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Deliverable name*"
+                            value={newDeliverable.name}
+                            onChange={e => setNewDeliverable({ ...newDeliverable, name: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            autoFocus
+                          />
+                          <input
+                            placeholder="Category*"
+                            value={newDeliverable.category}
+                            onChange={e => setNewDeliverable({ ...newDeliverable, category: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Owner"
+                            value={newDeliverable.owner}
+                            onChange={e => setNewDeliverable({ ...newDeliverable, owner: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            type="date"
+                            value={newDeliverable.due_date}
+                            onChange={e => setNewDeliverable({ ...newDeliverable, due_date: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <select
+                            value={newDeliverable.status}
+                            onChange={e => setNewDeliverable({ ...newDeliverable, status: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          >
+                            <option value="upcoming">Upcoming</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="done">Done</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createDeliverable}
+                            disabled={!newDeliverable.name.trim() || !newDeliverable.category.trim()}
+                            style={{ padding: '7px 14px', background: (!newDeliverable.name.trim() || !newDeliverable.category.trim()) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: (!newDeliverable.name.trim() || !newDeliverable.category.trim()) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingDeliverable(false); setNewDeliverable({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' }) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
                         <tr>
-                          {['Deliverable', 'Category', 'Due', 'Owner', 'Status'].map(h => (
+                          {['Deliverable', 'Category', 'Due', 'Owner', 'Status', ...(isAdmin ? ['Actions'] : [])].map(h => (
                             <th key={h} style={{
                               background: '#323E48', color: '#ffffff',
                               fontFamily: 'Oswald, sans-serif', fontWeight: 600,
@@ -780,44 +956,81 @@ export default function ProjectCenter() {
                       <tbody>
                         {deliverables.length === 0 ? (
                           <tr>
-                            <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#8a9199', fontSize: '12px' }}>
+                            <td colSpan={isAdmin ? 6 : 5} style={{ padding: '20px', textAlign: 'center', color: '#8a9199', fontSize: '12px' }}>
                               No deliverables found for this project.
                             </td>
                           </tr>
                         ) : deliverables.map((d: any, i: number) => (
                           <tr key={d.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#F4F5F6' }}>
-                            <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>
-                              {d.name}
-                            </td>
-                            <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
-                              {d.category}
-                            </td>
-                            <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
-                              {d.due_date}
-                            </td>
-                            <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{
-                                  width: '20px', height: '20px', borderRadius: '50%',
-                                  background: '#1F3864', color: '#fff',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: '9px', fontWeight: 700, fontFamily: 'Oswald, sans-serif'
-                                }}>
-                                  {d.owner?.split(' ').map((n: string) => n[0]).join('') || 'AW'}
-                                </div>
-                                <span style={{ fontSize: '12px', color: '#323E48' }}>{d.owner}</span>
-                              </div>
-                            </td>
-                            <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
-                              <span style={{
-                                fontSize: '10px', fontWeight: 700, padding: '2px 8px',
-                                borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '.3px',
-                                fontFamily: 'Oswald, sans-serif',
-                                background: sBg(d.status), color: sColor(d.status)
-                              }}>
-                                {d.status}
-                              </span>
-                            </td>
+                            {editingDeliverableId === d.id ? (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input value={deliverableDraft.name} onChange={e => setDeliverableDraft({ ...deliverableDraft, name: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input value={deliverableDraft.category} onChange={e => setDeliverableDraft({ ...deliverableDraft, category: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input type="date" value={deliverableDraft.due_date ? String(deliverableDraft.due_date).slice(0, 10) : ''} onChange={e => setDeliverableDraft({ ...deliverableDraft, due_date: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <input value={deliverableDraft.owner || ''} onChange={e => setDeliverableDraft({ ...deliverableDraft, owner: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }} />
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px' }}>
+                                  <select value={deliverableDraft.status} onChange={e => setDeliverableDraft({ ...deliverableDraft, status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '5px 7px', border: '1px solid #CCCCCC', borderRadius: '4px' }}>
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="done">Done</option>
+                                  </select>
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                  <button onClick={() => saveDeliverable(d.id)} style={{ marginRight: '6px', padding: '4px 10px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                                  <button onClick={() => setEditingDeliverableId(null)} style={{ padding: '4px 10px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>
+                                  {d.name}
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
+                                  {d.category}
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>
+                                  {d.due_date ? new Date(d.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{
+                                      width: '20px', height: '20px', borderRadius: '50%',
+                                      background: '#1F3864', color: '#fff',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: '9px', fontWeight: 700, fontFamily: 'Oswald, sans-serif'
+                                    }}>
+                                      {d.owner?.split(' ').map((n: string) => n[0]).join('') || 'AW'}
+                                    </div>
+                                    <span style={{ fontSize: '12px', color: '#323E48' }}>{d.owner}</span>
+                                  </div>
+                                </td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px' }}>
+                                  <span style={{
+                                    fontSize: '10px', fontWeight: 700, padding: '2px 8px',
+                                    borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '.3px',
+                                    fontFamily: 'Oswald, sans-serif',
+                                    background: sBg(d.status), color: sColor(d.status)
+                                  }}>
+                                    {d.status}
+                                  </span>
+                                </td>
+                                {isAdmin && (
+                                  <td style={{ borderBottom: '1px solid #CCCCCC', padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                                    <button onClick={() => { setEditingDeliverableId(d.id); setDeliverableDraft({ name: d.name, category: d.category, owner: d.owner, due_date: d.due_date, status: d.status }) }} style={{ marginRight: '6px', padding: '4px 10px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={() => deleteDeliverable(d.id)} style={{ padding: '4px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Delete</button>
+                                  </td>
+                                )}
+                              </>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -1343,45 +1556,143 @@ export default function ProjectCenter() {
                     </div>
                   </div>
                 )}
-                {/* CONTACTS */}
+                {/* CUSTOMER CONTACTS */}
                 {activeTab === 'contacts' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {contacts.length === 0 ? (
-                      <p style={{ fontSize: '13px', color: '#697077', textAlign: 'center', padding: '40px', gridColumn: '1/-1' }}>
-                        No contacts found.
-                      </p>
-                    ) : contacts.map((c: any) => (
-                      <div key={c.id} style={{
-                        background: '#F4F5F6', border: '1px solid #CCCCCC',
-                        borderLeft: c.is_primary ? '4px solid #A50021' : '1px solid #CCCCCC',
-                        borderRadius: '8px', padding: '16px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                          <div style={{
-                            width: '38px', height: '38px', borderRadius: '50%',
-                            background: '#1F3864', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', fontSize: '12px', fontWeight: 700,
-                            color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif'
-                          }}>
-                            {c.name.split(' ').map((n: string) => n[0]).join('')}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#323E48' }}>{c.name}</p>
-                            <p style={{ fontSize: '11px', color: '#697077' }}>{c.role}</p>
-                          </div>
-                          {c.is_primary && (
-                            <span style={{ fontSize: '8px', background: '#A50021', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-                              Primary
-                            </span>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      {isAdmin && !addingContact && (
+                        <button
+                          onClick={() => setAddingContact(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Contact
+                        </button>
+                      )}
+                    </div>
+                    {addingContact && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Name*"
+                            value={newContact.name}
+                            onChange={e => setNewContact({ ...newContact, name: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            autoFocus
+                          />
+                          <input
+                            placeholder="Role"
+                            value={newContact.role}
+                            onChange={e => setNewContact({ ...newContact, role: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Email"
+                            value={newContact.email}
+                            onChange={e => setNewContact({ ...newContact, email: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            placeholder="Phone"
+                            value={newContact.phone}
+                            onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#323E48' }}>
+                          <input
+                            type="checkbox"
+                            checked={newContact.is_primary}
+                            onChange={e => setNewContact({ ...newContact, is_primary: e.target.checked })}
+                          />
+                          Primary contact
+                        </label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createContact}
+                            disabled={!newContact.name.trim()}
+                            style={{ padding: '7px 14px', background: !newContact.name.trim() ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: !newContact.name.trim() ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingContact(false); setNewContact({ name: '', role: '', email: '', phone: '', is_primary: false }) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      {contacts.length === 0 ? (
+                        <p style={{ fontSize: '13px', color: '#697077', textAlign: 'center', padding: '40px', gridColumn: '1/-1' }}>
+                          No contacts found.
+                        </p>
+                      ) : contacts.map((c: any) => (
+                        <div key={c.id} style={{
+                          background: '#F4F5F6', border: '1px solid #CCCCCC',
+                          borderLeft: c.is_primary ? '4px solid #A50021' : '1px solid #CCCCCC',
+                          borderRadius: '8px', padding: '16px'
+                        }}>
+                          {editingContactId === c.id ? (
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                              <input value={contactDraft.name} onChange={e => setContactDraft({ ...contactDraft, name: e.target.value })} placeholder="Name" style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <input value={contactDraft.role || ''} onChange={e => setContactDraft({ ...contactDraft, role: e.target.value })} placeholder="Role" style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <input value={contactDraft.email || ''} onChange={e => setContactDraft({ ...contactDraft, email: e.target.value })} placeholder="Email" style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <input value={contactDraft.phone || ''} onChange={e => setContactDraft({ ...contactDraft, phone: e.target.value })} placeholder="Phone" style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#323E48' }}>
+                                <input type="checkbox" checked={!!contactDraft.is_primary} onChange={e => setContactDraft({ ...contactDraft, is_primary: e.target.checked })} />
+                                Primary contact
+                              </label>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button onClick={() => saveContact(c.id)} style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                                <button onClick={() => setEditingContactId(null)} style={{ padding: '6px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                <div style={{
+                                  width: '38px', height: '38px', borderRadius: '50%',
+                                  background: '#1F3864', display: 'flex', alignItems: 'center',
+                                  justifyContent: 'center', fontSize: '12px', fontWeight: 700,
+                                  color: '#fff', flexShrink: 0, fontFamily: 'Oswald, sans-serif'
+                                }}>
+                                  {c.name.split(' ').map((n: string) => n[0]).join('')}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#323E48' }}>{c.name}</p>
+                                  <p style={{ fontSize: '11px', color: '#697077' }}>{c.role}</p>
+                                </div>
+                                {c.is_primary && (
+                                  <span style={{ fontSize: '8px', background: '#A50021', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
+                              {c.email && (
+                                <a href={`mailto:${c.email}`} style={{ fontSize: '11px', color: '#00538C', display: 'block', marginBottom: '2px' }}>
+                                  ✉️ {c.email}
+                                </a>
+                              )}
+                              {c.phone && (
+                                <p style={{ fontSize: '11px', color: '#697077' }}>
+                                  📞 {c.phone}
+                                </p>
+                              )}
+                              {isAdmin && (
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                                  <button onClick={() => { setEditingContactId(c.id); setContactDraft({ name: c.name, role: c.role, email: c.email, phone: c.phone, is_primary: c.is_primary }) }} style={{ padding: '4px 10px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Edit</button>
+                                  <button onClick={() => deleteContact(c.id)} style={{ padding: '4px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Delete</button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
-                        {c.email && (
-                          <a href={`mailto:${c.email}`} style={{ fontSize: '11px', color: '#00538C', display: 'block' }}>
-                            ✉️ {c.email}
-                          </a>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
                 {/* SCHEDULE */}
