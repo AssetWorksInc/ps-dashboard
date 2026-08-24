@@ -138,6 +138,11 @@ export default function Dashboard() {
     customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
   })
 
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
+  const [teamDraft, setTeamDraft] = useState<any>({})
+  const [addingTeamMember, setAddingTeamMember] = useState(false)
+  const [newTeamMember, setNewTeamMember] = useState({ name: '', role: '', department: '', email: '', phone: '' })
+
   function refresh() {
     Promise.all([
       fetch('/api/dashboard').then(r => r.json()),
@@ -271,6 +276,29 @@ export default function Dashboard() {
       title: '', meeting_date: '', attendees: '', body: '', risks_decisions: '', monitor_control: '', action_items: '',
       customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
     })
+    refresh()
+  }
+
+  async function saveTeamMember(id: string) {
+    await fetch(`/api/team/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(teamDraft),
+    })
+    setEditingTeamId(null)
+    refresh()
+  }
+  async function deleteTeamMember(id: string) {
+    if (!confirm('Remove this team member?')) return
+    await fetch(`/api/team/${id}`, { method: 'DELETE' })
+    refresh()
+  }
+  async function createTeamMember() {
+    if (!newTeamMember.name) return
+    await fetch('/api/team', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newTeamMember, is_ps_team: true }),
+    })
+    setAddingTeamMember(false)
+    setNewTeamMember({ name: '', role: '', department: '', email: '', phone: '' })
     refresh()
   }
 
@@ -797,20 +825,67 @@ export default function Dashboard() {
 
             {/* Your AssetWorks Team */}
             <div style={{ ...cardStyle, marginBottom: 0 }}>
-              <h3 style={{ ...headingStyle, marginBottom: '14px' }}>Your AssetWorks Team</h3>
-              {team.length === 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <h3 style={headingStyle}>Your AssetWorks Team</h3>
+                {isAdmin && <button style={addBtn} onClick={() => setAddingTeamMember(true)}>+ Add Member</button>}
+              </div>
+              {team.length === 0 && !addingTeamMember && (
                 <div style={{ padding: '10px 0', color: C.lightGray, fontSize: '12px', textAlign: 'center' }}>No team members assigned yet</div>
               )}
+              {addingTeamMember && (
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gap: '6px' }}>
+                  <input style={inputStyle} placeholder="Name*" value={newTeamMember.name} onChange={e => setNewTeamMember({ ...newTeamMember, name: e.target.value })} autoFocus />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <input style={inputStyle} placeholder="Role" value={newTeamMember.role} onChange={e => setNewTeamMember({ ...newTeamMember, role: e.target.value })} />
+                    <input style={inputStyle} placeholder="Department" value={newTeamMember.department} onChange={e => setNewTeamMember({ ...newTeamMember, department: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <input style={inputStyle} placeholder="Email" value={newTeamMember.email} onChange={e => setNewTeamMember({ ...newTeamMember, email: e.target.value })} />
+                    <input style={inputStyle} placeholder="Phone" value={newTeamMember.phone} onChange={e => setNewTeamMember({ ...newTeamMember, phone: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button style={primaryBtn} onClick={createTeamMember}>Add</button>
+                    <button style={secondaryBtn} onClick={() => { setAddingTeamMember(false); setNewTeamMember({ name: '', role: '', department: '', email: '', phone: '' }) }}>Cancel</button>
+                  </div>
+                </div>
+              )}
               {team.map((c: any, i: number) => (
-                <div key={c.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 0', borderBottom: i < team.length - 1 ? `1px solid ${C.rowBorder}` : 'none' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.navy, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
-                    {initialsOf(c.name)}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '13px', color: C.dark }}>{c.name}</div>
-                    <div style={{ fontSize: '11px', color: C.lightGray }}>{c.role}</div>
-                    <a href={`mailto:${c.email}`} style={{ fontSize: '11px', color: C.blue, marginTop: '2px', display: 'block' }}>{c.email}</a>
-                  </div>
+                <div key={c.id} style={{ padding: '10px 0', borderBottom: i < team.length - 1 ? `1px solid ${C.rowBorder}` : 'none' }}>
+                  {editingTeamId === c.id ? (
+                    <div style={{ display: 'grid', gap: '6px' }}>
+                      <input style={inputStyle} value={teamDraft.name} onChange={e => setTeamDraft({ ...teamDraft, name: e.target.value })} placeholder="Name" />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <input style={inputStyle} value={teamDraft.role || ''} onChange={e => setTeamDraft({ ...teamDraft, role: e.target.value })} placeholder="Role" />
+                        <input style={inputStyle} value={teamDraft.department || ''} onChange={e => setTeamDraft({ ...teamDraft, department: e.target.value })} placeholder="Department" />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <input style={inputStyle} value={teamDraft.email || ''} onChange={e => setTeamDraft({ ...teamDraft, email: e.target.value })} placeholder="Email" />
+                        <input style={inputStyle} value={teamDraft.phone || ''} onChange={e => setTeamDraft({ ...teamDraft, phone: e.target.value })} placeholder="Phone" />
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button style={primaryBtn} onClick={() => saveTeamMember(c.id)}>Save</button>
+                        <button style={secondaryBtn} onClick={() => setEditingTeamId(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.navy, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0, fontFamily: 'Oswald, sans-serif' }}>
+                        {initialsOf(c.name)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: C.dark }}>{c.name}</div>
+                        <div style={{ fontSize: '11px', color: C.lightGray }}>{c.role}{c.department ? ` · ${c.department}` : ''}</div>
+                        {c.email && <a href={`mailto:${c.email}`} style={{ fontSize: '11px', color: C.blue, marginTop: '2px', display: 'block' }}>{c.email}</a>}
+                        {c.phone && <div style={{ fontSize: '11px', color: C.lightGray, marginTop: '1px' }}>{c.phone}</div>}
+                      </div>
+                      {isAdmin && (
+                        <div style={{ flexShrink: 0 }}>
+                          <button style={iconBtn} onClick={() => { setTeamDraft(c); setEditingTeamId(c.id) }}>✎</button>
+                          <button style={iconBtn} onClick={() => deleteTeamMember(c.id)}>🗑</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
