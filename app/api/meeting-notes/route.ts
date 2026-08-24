@@ -9,7 +9,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
     const result = await pool.query(
-      `SELECT id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author, created_at
+      `SELECT id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author, created_at,
+              customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control
        FROM meeting_notes
        WHERE tenant_id = $1
        ORDER BY meeting_date DESC NULLS LAST, created_at DESC`,
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     const {
       title, body: statusUpdate, risks_decisions, meeting_date,
       attendees, action_items, project_id,
+      customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control,
     } = body
 
     if (!title) {
@@ -43,8 +45,9 @@ export async function POST(req: NextRequest) {
 
     const result = await pool.query(
       `INSERT INTO meeting_notes
-        (tenant_id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (tenant_id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author,
+         customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         user.tenantId,
@@ -56,6 +59,11 @@ export async function POST(req: NextRequest) {
         Array.isArray(attendees) ? attendees : [],
         Array.isArray(action_items) ? action_items : [],
         user.name || 'Portal User',
+        customer_satisfaction || 'na',
+        scope_status || 'na',
+        budget_quality_status || 'na',
+        on_time_status || 'na',
+        monitor_control || null,
       ]
     )
 
