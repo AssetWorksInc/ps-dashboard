@@ -84,32 +84,8 @@ const DELIVERABLE_STATUSES = [
   { value: 'completed', label: 'Completed' },
 ]
 
-const STATUS_METRICS = [
-  { key: 'customer_satisfaction', label: 'Customer Satisfaction' },
-  { key: 'scope_status', label: 'Scope' },
-  { key: 'budget_quality_status', label: 'Budget / Quality' },
-  { key: 'on_time_status', label: 'On Time' },
-]
-const metricColor = (v: string) => (v === 'good' ? C.green : v === 'caution' ? C.amber : v === 'at-risk' ? C.red : C.lightGray)
-const metricBg = (v: string) => (v === 'good' ? C.greenBg : v === 'caution' ? C.amberBg : v === 'at-risk' ? C.redBg : C.rowBorder)
-const metricLabel = (v: string) => (v === 'good' ? 'Good' : v === 'caution' ? 'Caution' : v === 'at-risk' ? 'At Risk' : 'N/A')
-
-function MetricPill({ label, value }: { label: string; value: string }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '5px',
-      fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px',
-      fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.3px',
-      background: metricBg(value), color: metricColor(value), marginRight: '6px', marginBottom: '4px',
-    }}>
-      {label}: {metricLabel(value)}
-    </span>
-  )
-}
-
 export default function Dashboard() {
   const [data, setData] = useState<any>(null)
-  const [notes, setNotes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [openAppt, setOpenAppt] = useState<string | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -130,26 +106,14 @@ export default function Dashboard() {
   const [addingDeliverable, setAddingDeliverable] = useState(false)
   const [newDeliverable, setNewDeliverable] = useState<any>({ name: '', category: '', owner: '', due_date: '', status: 'not-started' })
 
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
-  const [noteDraft, setNoteDraft] = useState<any>({})
-  const [addingNote, setAddingNote] = useState(false)
-  const [newNote, setNewNote] = useState<any>({
-    title: '', meeting_date: '', attendees: '', body: '', risks_decisions: '', monitor_control: '', action_items: '',
-    customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
-  })
-
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
   const [teamDraft, setTeamDraft] = useState<any>({})
   const [addingTeamMember, setAddingTeamMember] = useState(false)
   const [newTeamMember, setNewTeamMember] = useState({ name: '', role: '', department: '', email: '', phone: '' })
 
   function refresh() {
-    Promise.all([
-      fetch('/api/dashboard').then(r => r.json()),
-      fetch('/api/meeting-notes').then(r => r.json()),
-    ]).then(([d, n]) => {
+    fetch('/api/dashboard').then(r => r.json()).then(d => {
       setData(d)
-      setNotes(n.notes || [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }
@@ -179,12 +143,12 @@ export default function Dashboard() {
     )
   }
 
+  const announcements: any[] = data?.announcements || []
   const milestones: any[] = (data?.milestones || [])
     .filter((m: any) => m.project_id === project.id)
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || new Date(a.due_date || 0).getTime() - new Date(b.due_date || 0).getTime())
   const deliverables: any[] = (data?.deliverables || []).filter((d: any) => d.project_id === project.id)
   const actionItems = deliverables.filter((d: any) => d.status === 'scheduled' || d.status === 'in-progress')
-  const projectNotes = notes.filter((n: any) => n.project_id === project.id)
   const team: any[] = (data?.team || []).filter((t: any) => t.is_ps_team)
 
   const activeMilestone = milestones.find((m: any) => m.status === 'active') || milestones.find((m: any) => m.status !== 'done')
@@ -240,42 +204,6 @@ export default function Dashboard() {
     })
     setAddingDeliverable(false)
     setNewDeliverable({ name: '', category: '', owner: '', due_date: '', status: 'not-started' })
-    refresh()
-  }
-
-  async function saveNote(id: string) {
-    await fetch(`/api/meeting-notes/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...noteDraft,
-        attendees: typeof noteDraft.attendees === 'string' ? noteDraft.attendees.split(',').map((s: string) => s.trim()).filter(Boolean) : noteDraft.attendees,
-        action_items: typeof noteDraft.action_items === 'string' ? noteDraft.action_items.split('\n').map((s: string) => s.trim()).filter(Boolean) : noteDraft.action_items,
-      }),
-    })
-    setEditingNoteId(null)
-    refresh()
-  }
-  async function deleteNote(id: string) {
-    if (!confirm('Delete this status note?')) return
-    await fetch(`/api/meeting-notes/${id}`, { method: 'DELETE' })
-    refresh()
-  }
-  async function createNote() {
-    if (!newNote.title) return
-    await fetch('/api/meeting-notes', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...newNote,
-        project_id: project.id,
-        attendees: newNote.attendees.split(',').map((s: string) => s.trim()).filter(Boolean),
-        action_items: newNote.action_items.split('\n').map((s: string) => s.trim()).filter(Boolean),
-      }),
-    })
-    setAddingNote(false)
-    setNewNote({
-      title: '', meeting_date: '', attendees: '', body: '', risks_decisions: '', monitor_control: '', action_items: '',
-      customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
-    })
     refresh()
   }
 
@@ -424,6 +352,32 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Announcements */}
+        {announcements.length > 0 && (
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={headingStyle}>📢 Announcements</h3>
+              <a href="/collaboration" style={{ fontSize: '11px', fontWeight: 600, color: C.blue, textDecoration: 'none' }}>View all →</a>
+            </div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {announcements.slice(0, 3).map((a: any) => (
+                <div key={a.id} style={{ borderLeft: `4px solid ${C.red}`, background: C.zebra, borderRadius: '4px', padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    {a.is_pinned && (
+                      <span style={{ fontSize: '9px', background: C.red, color: '#fff', padding: '2px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>Pinned</span>
+                    )}
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: C.dark, fontFamily: 'Oswald, sans-serif' }}>{a.title}</span>
+                    <span style={{ fontSize: '10px', color: C.lightGray, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                      {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  {a.body && <p style={{ fontSize: '12px', color: C.gray, lineHeight: 1.5, margin: 0 }}>{a.body}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 2-column grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
@@ -670,118 +624,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Status Notes */}
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <h3 style={headingStyle}>Status Notes</h3>
-                {isAdmin && <button style={addBtn} onClick={() => setAddingNote(true)}>+ Add Status Note</button>}
-              </div>
-              {projectNotes.length === 0 && !addingNote && (
-                <div style={{ padding: '16px 0', color: C.lightGray, fontSize: '12px', textAlign: 'center' }}>No status notes logged yet</div>
-              )}
-              {addingNote && (
-                <div style={{ border: `1px solid ${C.border}`, borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gap: '6px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '6px' }}>
-                    <input style={inputStyle} placeholder="Title" value={newNote.title} onChange={e => setNewNote({ ...newNote, title: e.target.value })} autoFocus />
-                    <input type="date" style={inputStyle} value={newNote.meeting_date} onChange={e => setNewNote({ ...newNote, meeting_date: e.target.value })} />
-                  </div>
-                  <input style={inputStyle} placeholder="Attendees (comma-separated)" value={newNote.attendees} onChange={e => setNewNote({ ...newNote, attendees: e.target.value })} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-                    {STATUS_METRICS.map(m => (
-                      <div key={m.key}>
-                        <label style={labelStyle}>{m.label}</label>
-                        <select style={inputStyle} value={newNote[m.key]} onChange={e => setNewNote({ ...newNote, [m.key]: e.target.value })}>
-                          <option value="good">Good</option>
-                          <option value="caution">Caution</option>
-                          <option value="at-risk">At Risk</option>
-                          <option value="na">N/A</option>
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                  <label style={labelStyle}>Status Update / Notes</label>
-                  <textarea style={{ ...inputStyle, minHeight: '60px' }} placeholder="Type notes from the call here..." value={newNote.body} onChange={e => setNewNote({ ...newNote, body: e.target.value })} />
-                  <label style={labelStyle}>Risks / Decisions / Critical Notes</label>
-                  <textarea style={{ ...inputStyle, minHeight: '45px' }} placeholder="Risks, decisions, OOO/conflicts, etc." value={newNote.risks_decisions} onChange={e => setNewNote({ ...newNote, risks_decisions: e.target.value })} />
-                  <label style={labelStyle}>Monitor &amp; Control / Next Steps</label>
-                  <textarea style={{ ...inputStyle, minHeight: '45px' }} placeholder="Next status meeting, cadence, document links, scope notes..." value={newNote.monitor_control} onChange={e => setNewNote({ ...newNote, monitor_control: e.target.value })} />
-                  <label style={labelStyle}>Action Items (one per line)</label>
-                  <textarea style={{ ...inputStyle, minHeight: '45px' }} placeholder="Action items (one per line)" value={newNote.action_items} onChange={e => setNewNote({ ...newNote, action_items: e.target.value })} />
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button style={primaryBtn} onClick={createNote}>Save Note</button>
-                    <button style={secondaryBtn} onClick={() => setAddingNote(false)}>Cancel</button>
-                  </div>
-                </div>
-              )}
-              {projectNotes.map((n: any) => (
-                <div key={n.id} style={{ border: `1px solid ${C.rowBorder}`, borderRadius: '6px', padding: '12px', marginBottom: '10px' }}>
-                  {editingNoteId === n.id ? (
-                    <div style={{ display: 'grid', gap: '6px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '6px' }}>
-                        <input style={inputStyle} value={noteDraft.title} onChange={e => setNoteDraft({ ...noteDraft, title: e.target.value })} />
-                        <input type="date" style={inputStyle} value={toInputDate(noteDraft.meeting_date)} onChange={e => setNoteDraft({ ...noteDraft, meeting_date: e.target.value })} />
-                      </div>
-                      <input style={inputStyle} value={Array.isArray(noteDraft.attendees) ? noteDraft.attendees.join(', ') : noteDraft.attendees} onChange={e => setNoteDraft({ ...noteDraft, attendees: e.target.value })} />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-                        {STATUS_METRICS.map(m => (
-                          <div key={m.key}>
-                            <label style={labelStyle}>{m.label}</label>
-                            <select style={inputStyle} value={noteDraft[m.key] || 'na'} onChange={e => setNoteDraft({ ...noteDraft, [m.key]: e.target.value })}>
-                              <option value="good">Good</option>
-                              <option value="caution">Caution</option>
-                              <option value="at-risk">At Risk</option>
-                              <option value="na">N/A</option>
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                      <label style={labelStyle}>Status Update / Notes</label>
-                      <textarea style={{ ...inputStyle, minHeight: '60px' }} value={noteDraft.body || ''} onChange={e => setNoteDraft({ ...noteDraft, body: e.target.value })} />
-                      <label style={labelStyle}>Risks / Decisions / Critical Notes</label>
-                      <textarea style={{ ...inputStyle, minHeight: '45px' }} value={noteDraft.risks_decisions || ''} onChange={e => setNoteDraft({ ...noteDraft, risks_decisions: e.target.value })} />
-                      <label style={labelStyle}>Monitor &amp; Control / Next Steps</label>
-                      <textarea style={{ ...inputStyle, minHeight: '45px' }} value={noteDraft.monitor_control || ''} onChange={e => setNoteDraft({ ...noteDraft, monitor_control: e.target.value })} />
-                      <label style={labelStyle}>Action Items (one per line)</label>
-                      <textarea style={{ ...inputStyle, minHeight: '45px' }} value={Array.isArray(noteDraft.action_items) ? noteDraft.action_items.join('\n') : noteDraft.action_items} onChange={e => setNoteDraft({ ...noteDraft, action_items: e.target.value })} />
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button style={primaryBtn} onClick={() => saveNote(n.id)}>Save</button>
-                        <button style={secondaryBtn} onClick={() => setEditingNoteId(null)}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '13px', color: C.dark }}>{n.title}</div>
-                          <div style={{ fontSize: '11px', color: C.lightGray, marginTop: '2px' }}>{fmtDate(n.meeting_date)} · {n.author}{n.attendees?.length ? ` · ${n.attendees.join(', ')}` : ''}</div>
-                        </div>
-                        {isAdmin && (
-                          <div style={{ flexShrink: 0 }}>
-                            <button style={iconBtn} onClick={() => { setNoteDraft({ ...n, attendees: (n.attendees || []).join(', '), action_items: (n.action_items || []).join('\n') }); setEditingNoteId(n.id) }}>✎</button>
-                            <button style={iconBtn} onClick={() => deleteNote(n.id)}>🗑</button>
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ marginTop: '8px' }}>
-                        {STATUS_METRICS.map(m => <MetricPill key={m.key} label={m.label} value={n[m.key] || 'na'} />)}
-                      </div>
-                      {n.body && <div style={{ fontSize: '12px', color: C.dark, marginTop: '6px', whiteSpace: 'pre-wrap' }}>{n.body}</div>}
-                      {n.risks_decisions && (
-                        <div style={{ fontSize: '12px', color: C.red, marginTop: '6px', whiteSpace: 'pre-wrap' }}><strong>Risks / Decisions:</strong> {n.risks_decisions}</div>
-                      )}
-                      {n.monitor_control && (
-                        <div style={{ fontSize: '12px', color: C.blue, marginTop: '6px', whiteSpace: 'pre-wrap' }}><strong>Monitor &amp; Control:</strong> {n.monitor_control}</div>
-                      )}
-                      {n.action_items?.length > 0 && (
-                        <ul style={{ fontSize: '12px', color: C.gray, marginTop: '6px', paddingLeft: '18px' }}>
-                          {n.action_items.map((a: string, idx: number) => <li key={idx}>{a}</li>)}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Right column */}
