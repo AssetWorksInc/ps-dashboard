@@ -36,6 +36,12 @@ export default function ProjectCenter() {
   const [sopDocFile, setSopDocFile] = useState<File | null>(null)
   const [uploadingSopDoc, setUploadingSopDoc] = useState(false)
 
+  // Schedule tab state
+  const [addingAppt, setAddingAppt] = useState(false)
+  const [newAppt, setNewAppt] = useState({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' })
+  const [editingApptId, setEditingApptId] = useState<string | null>(null)
+  const [apptDraft, setApptDraft] = useState<any>({})
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -103,6 +109,13 @@ export default function ProjectCenter() {
     </span>
   )
   const fmtMoney = (n: number) => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+  const toDateTimeLocal = (d: string | null | undefined) => {
+    if (!d) return ''
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
   const sopColor = (s: string) => s === 'complete' ? '#2E7D32' : s === 'in-progress' ? '#A50021' : '#8a6400'
   const sopBg = (s: string) => s === 'complete' ? '#E7F3E8' : s === 'in-progress' ? '#FBE7EA' : '#FDF3DC'
   const sopLabel = (s: string) => s === 'complete' ? 'Complete' : s === 'in-progress' ? 'In Progress' : 'Not Started'
@@ -362,6 +375,56 @@ export default function ProjectCenter() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  async function createAppointment() {
+    if (!newAppt.title.trim() || !newAppt.scheduled_at) return
+    const res = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        title: newAppt.title,
+        session_type: newAppt.session_type || null,
+        consultant: newAppt.consultant || null,
+        scheduled_at: newAppt.scheduled_at ? new Date(newAppt.scheduled_at).toISOString() : null,
+        location: newAppt.location || null,
+        notes: newAppt.notes || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingAppt(false)
+      setNewAppt({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' })
+    }
+  }
+
+  async function saveAppointment(id: string) {
+    const res = await fetch(`/api/appointments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: apptDraft.title,
+        session_type: apptDraft.session_type || null,
+        consultant: apptDraft.consultant || null,
+        scheduled_at: apptDraft.scheduled_at ? new Date(apptDraft.scheduled_at).toISOString() : null,
+        location: apptDraft.location || null,
+        notes: apptDraft.notes || null,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingApptId(null)
+    }
+  }
+
+  async function deleteAppointment(id: string) {
+    if (!confirm('Delete this appointment?')) return
+    const res = await fetch(`/api/appointments/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -1324,40 +1387,172 @@ export default function ProjectCenter() {
                 {/* SCHEDULE */}
                 {activeTab === 'schedule' && (
                   <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      {isAdmin && !addingAppt && (
+                        <button
+                          onClick={() => setAddingAppt(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Appointment
+                        </button>
+                      )}
+                    </div>
+                    {addingAppt && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <input
+                          placeholder="Title*"
+                          value={newAppt.title}
+                          onChange={e => setNewAppt({ ...newAppt, title: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          autoFocus
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            type="datetime-local"
+                            value={newAppt.scheduled_at}
+                            onChange={e => setNewAppt({ ...newAppt, scheduled_at: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            placeholder="Session type (e.g. Status Call)"
+                            value={newAppt.session_type}
+                            onChange={e => setNewAppt({ ...newAppt, session_type: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Consultant"
+                            value={newAppt.consultant}
+                            onChange={e => setNewAppt({ ...newAppt, consultant: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            placeholder="Location (e.g. Zoom, Teams)"
+                            value={newAppt.location}
+                            onChange={e => setNewAppt({ ...newAppt, location: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <input
+                          placeholder="Notes (optional)"
+                          value={newAppt.notes}
+                          onChange={e => setNewAppt({ ...newAppt, notes: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                        />
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createAppointment}
+                            disabled={!newAppt.title.trim() || !newAppt.scheduled_at}
+                            style={{ padding: '7px 14px', background: (!newAppt.title.trim() || !newAppt.scheduled_at) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: (!newAppt.title.trim() || !newAppt.scheduled_at) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingAppt(false); setNewAppt({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' }) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {appointments.length === 0 ? (
                       <p style={{ fontSize: '13px', color: '#697077', textAlign: 'center', padding: '40px' }}>
                         No appointments scheduled.
                       </p>
                     ) : appointments.map((a: any, i: number) => (
                       <div key={a.id} style={{
-                        display: 'flex', gap: '14px', padding: '14px 0',
+                        padding: '14px 0',
                         borderBottom: i < appointments.length - 1 ? '1px solid #EAECEE' : 'none',
-                        alignItems: 'flex-start'
                       }}>
-                        <div style={{ width: '44px', textAlign: 'center', flexShrink: 0 }}>
-                          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#A50021', fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>
-                            {new Date(a.scheduled_at).toLocaleDateString('en-US', { month: 'short' })}
+                        {editingApptId === a.id ? (
+                          <div style={{ display: 'grid', gap: '8px' }}>
+                            <input
+                              value={apptDraft.title}
+                              onChange={e => setApptDraft({ ...apptDraft, title: e.target.value })}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <input
+                                type="datetime-local"
+                                value={apptDraft.scheduled_at || ''}
+                                onChange={e => setApptDraft({ ...apptDraft, scheduled_at: e.target.value })}
+                                style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                              />
+                              <input
+                                placeholder="Session type"
+                                value={apptDraft.session_type || ''}
+                                onChange={e => setApptDraft({ ...apptDraft, session_type: e.target.value })}
+                                style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                              />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <input
+                                placeholder="Consultant"
+                                value={apptDraft.consultant || ''}
+                                onChange={e => setApptDraft({ ...apptDraft, consultant: e.target.value })}
+                                style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                              />
+                              <input
+                                placeholder="Location"
+                                value={apptDraft.location || ''}
+                                onChange={e => setApptDraft({ ...apptDraft, location: e.target.value })}
+                                style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                              />
+                            </div>
+                            <input
+                              placeholder="Notes"
+                              value={apptDraft.notes || ''}
+                              onChange={e => setApptDraft({ ...apptDraft, notes: e.target.value })}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => saveAppointment(a.id)} style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                              <button onClick={() => setEditingApptId(null)} style={{ padding: '6px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '22px', fontWeight: 700, color: '#323E48', fontFamily: 'Oswald, sans-serif', lineHeight: 1.1 }}>
-                            {new Date(a.scheduled_at).getDate()}
+                        ) : (
+                          <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                            <div style={{ width: '44px', textAlign: 'center', flexShrink: 0 }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#A50021', fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>
+                                {a.scheduled_at ? new Date(a.scheduled_at).toLocaleDateString('en-US', { month: 'short' }) : '—'}
+                              </div>
+                              <div style={{ fontSize: '22px', fontWeight: 700, color: '#323E48', fontFamily: 'Oswald, sans-serif', lineHeight: 1.1 }}>
+                                {a.scheduled_at ? new Date(a.scheduled_at).getDate() : '—'}
+                              </div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '4px' }}>
+                                {a.title}{a.session_type ? ` · ${a.session_type}` : ''}
+                              </p>
+                              {a.scheduled_at && (
+                                <p style={{ fontSize: '11px', color: '#697077', marginBottom: '2px' }}>
+                                  🕐 {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                </p>
+                              )}
+                              {a.consultant && <p style={{ fontSize: '11px', color: '#697077', marginBottom: '2px' }}>👤 {a.consultant}</p>}
+                              {a.location && <p style={{ fontSize: '11px', color: '#697077', marginBottom: '2px' }}>📍 {a.location}</p>}
+                              {a.notes && <p style={{ fontSize: '11px', color: '#8a9199', marginTop: '4px' }}>{a.notes}</p>}
+                            </div>
+                            {isAdmin && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                                <button
+                                  onClick={() => { setEditingApptId(a.id); setApptDraft({ title: a.title, session_type: a.session_type, consultant: a.consultant, scheduled_at: toDateTimeLocal(a.scheduled_at), location: a.location, notes: a.notes }) }}
+                                  style={{ padding: '6px 14px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteAppointment(a.id)}
+                                  style={{ padding: '6px 14px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '4px' }}>{a.title}</p>
-                          <p style={{ fontSize: '11px', color: '#697077', marginBottom: '2px' }}>
-                            🕐 {new Date(a.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                          </p>
-                          <p style={{ fontSize: '11px', color: '#697077', marginBottom: '2px' }}>👤 {a.consultant}</p>
-                          <p style={{ fontSize: '11px', color: '#697077' }}>📍 {a.location}</p>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                          <button style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald, sans-serif' }}>
-                            Join
-                          </button>
-                          <button style={{ padding: '6px 14px', background: '#ffffff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                            Reschedule
-                          </button>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
