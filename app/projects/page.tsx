@@ -54,6 +54,18 @@ export default function ProjectCenter() {
   const [editingContactId, setEditingContactId] = useState<string | null>(null)
   const [contactDraft, setContactDraft] = useState<any>({})
 
+  // Status Meeting Notes tab state
+  const emptyMeetingNote = {
+    title: '', body: '', meeting_date: '', risks_decisions: '', monitor_control: '',
+    attendees: '', action_items: '',
+    customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
+  }
+  const [addingMeetingNote, setAddingMeetingNote] = useState(false)
+  const [newMeetingNote, setNewMeetingNote] = useState<any>(emptyMeetingNote)
+  const [editingMeetingNoteId, setEditingMeetingNoteId] = useState<string | null>(null)
+  const [meetingNoteDraft, setMeetingNoteDraft] = useState<any>({})
+  const [openMeetingNoteId, setOpenMeetingNoteId] = useState<string | null>(null)
+
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -140,6 +152,10 @@ export default function ProjectCenter() {
   const sopCompleteCount = sopItems.filter((s: any) => s.status === 'complete').length
   const sopPct = sopItems.length > 0 ? Math.round((sopCompleteCount / sopItems.length) * 100) : 0
   const sopDocuments = data?.documents?.filter((d: any) => d.project_id === selectedProject?.id && d.category === 'SOP') || []
+  const meetingNotes = data?.meetingNotes?.filter((m: any) => m.project_id === selectedProject?.id) || []
+  const statusColor = (s: string) => s === 'green' ? '#2E7D32' : s === 'yellow' ? '#8a6400' : s === 'red' ? '#A50021' : '#8a9199'
+  const statusBg = (s: string) => s === 'green' ? '#E7F3E8' : s === 'yellow' ? '#FDF3DC' : s === 'red' ? '#FBE7EA' : '#F4F5F6'
+  const statusLabel = (s: string) => s === 'green' ? 'On Track' : s === 'yellow' ? 'At Risk' : s === 'red' ? 'Critical' : 'N/A'
   const docIcon = (t: string) => t === 'pdf' ? '📄' : (t === 'doc' || t === 'docx') ? '📝' : (t === 'xls' || t === 'xlsx') ? '📊' : (t === 'ppt' || t === 'pptx') ? '📈' : '📁'
   const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
   const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
@@ -157,6 +173,7 @@ export default function ProjectCenter() {
     { id: 'sop', label: 'SOP Checklist' },
     { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
+    { id: 'meetingNotes', label: 'Status Meeting Notes' },
   ]
   const handleSave = async (health: string, status: string) => {
     setSaving(true)
@@ -533,6 +550,73 @@ export default function ProjectCenter() {
   async function deleteContact(id: string) {
     if (!confirm('Delete this contact?')) return
     const res = await fetch(`/api/project-contacts/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+
+  function splitList(v: string): string[] {
+    return String(v || '').split(',').map(s => s.trim()).filter(Boolean)
+  }
+  function joinList(v: any): string {
+    return Array.isArray(v) ? v.join(', ') : ''
+  }
+
+  async function createMeetingNote() {
+    if (!newMeetingNote.title.trim()) return
+    const res = await fetch('/api/meeting-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        title: newMeetingNote.title,
+        body: newMeetingNote.body || null,
+        meeting_date: newMeetingNote.meeting_date || null,
+        risks_decisions: newMeetingNote.risks_decisions || null,
+        monitor_control: newMeetingNote.monitor_control || null,
+        attendees: splitList(newMeetingNote.attendees),
+        action_items: splitList(newMeetingNote.action_items),
+        customer_satisfaction: newMeetingNote.customer_satisfaction,
+        scope_status: newMeetingNote.scope_status,
+        budget_quality_status: newMeetingNote.budget_quality_status,
+        on_time_status: newMeetingNote.on_time_status,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingMeetingNote(false)
+      setNewMeetingNote(emptyMeetingNote)
+    }
+  }
+
+  async function saveMeetingNote(id: string) {
+    const res = await fetch(`/api/meeting-notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: meetingNoteDraft.title,
+        body: meetingNoteDraft.body || null,
+        meeting_date: meetingNoteDraft.meeting_date || null,
+        risks_decisions: meetingNoteDraft.risks_decisions || null,
+        monitor_control: meetingNoteDraft.monitor_control || null,
+        attendees: splitList(meetingNoteDraft.attendees),
+        action_items: splitList(meetingNoteDraft.action_items),
+        customer_satisfaction: meetingNoteDraft.customer_satisfaction,
+        scope_status: meetingNoteDraft.scope_status,
+        budget_quality_status: meetingNoteDraft.budget_quality_status,
+        on_time_status: meetingNoteDraft.on_time_status,
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setEditingMeetingNoteId(null)
+    }
+  }
+
+  async function deleteMeetingNote(id: string) {
+    if (!confirm('Delete this status meeting note?')) return
+    const res = await fetch(`/api/meeting-notes/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -1863,6 +1947,260 @@ export default function ProjectCenter() {
                               </div>
                             )}
                           </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* STATUS MEETING NOTES */}
+                {activeTab === 'meetingNotes' && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      {isAdmin && !addingMeetingNote && (
+                        <button
+                          onClick={() => setAddingMeetingNote(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Status Meeting Note
+                        </button>
+                      )}
+                    </div>
+                    {addingMeetingNote && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Title*"
+                            value={newMeetingNote.title}
+                            onChange={e => setNewMeetingNote({ ...newMeetingNote, title: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            autoFocus
+                          />
+                          <input
+                            type="date"
+                            value={newMeetingNote.meeting_date}
+                            onChange={e => setNewMeetingNote({ ...newMeetingNote, meeting_date: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <textarea
+                          placeholder="Status update / notes"
+                          value={newMeetingNote.body}
+                          onChange={e => setNewMeetingNote({ ...newMeetingNote, body: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '60px', fontFamily: 'Roboto, sans-serif' }}
+                        />
+                        <textarea
+                          placeholder="Risks & decisions"
+                          value={newMeetingNote.risks_decisions}
+                          onChange={e => setNewMeetingNote({ ...newMeetingNote, risks_decisions: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }}
+                        />
+                        <textarea
+                          placeholder="Monitor & control notes"
+                          value={newMeetingNote.monitor_control}
+                          onChange={e => setNewMeetingNote({ ...newMeetingNote, monitor_control: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }}
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Attendees (comma separated)"
+                            value={newMeetingNote.attendees}
+                            onChange={e => setNewMeetingNote({ ...newMeetingNote, attendees: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            placeholder="Action items (comma separated)"
+                            value={newMeetingNote.action_items}
+                            onChange={e => setNewMeetingNote({ ...newMeetingNote, action_items: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Customer Satisfaction</label>
+                            <select value={newMeetingNote.customer_satisfaction} onChange={e => setNewMeetingNote({ ...newMeetingNote, customer_satisfaction: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                              <option value="na">N/A</option>
+                              <option value="green">On Track</option>
+                              <option value="yellow">At Risk</option>
+                              <option value="red">Critical</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Scope</label>
+                            <select value={newMeetingNote.scope_status} onChange={e => setNewMeetingNote({ ...newMeetingNote, scope_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                              <option value="na">N/A</option>
+                              <option value="green">On Track</option>
+                              <option value="yellow">At Risk</option>
+                              <option value="red">Critical</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Budget/Quality</label>
+                            <select value={newMeetingNote.budget_quality_status} onChange={e => setNewMeetingNote({ ...newMeetingNote, budget_quality_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                              <option value="na">N/A</option>
+                              <option value="green">On Track</option>
+                              <option value="yellow">At Risk</option>
+                              <option value="red">Critical</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>On-Time</label>
+                            <select value={newMeetingNote.on_time_status} onChange={e => setNewMeetingNote({ ...newMeetingNote, on_time_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                              <option value="na">N/A</option>
+                              <option value="green">On Track</option>
+                              <option value="yellow">At Risk</option>
+                              <option value="red">Critical</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createMeetingNote}
+                            disabled={!newMeetingNote.title.trim()}
+                            style={{ padding: '7px 14px', background: !newMeetingNote.title.trim() ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: !newMeetingNote.title.trim() ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingMeetingNote(false); setNewMeetingNote(emptyMeetingNote) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {meetingNotes.length === 0 ? (
+                      <p style={{ fontSize: '13px', color: '#697077', textAlign: 'center', padding: '40px' }}>
+                        No status meeting notes yet.
+                      </p>
+                    ) : meetingNotes.map((m: any, i: number) => (
+                      <div key={m.id} style={{
+                        background: '#ffffff', border: '1px solid #CCCCCC', borderRadius: '8px',
+                        marginBottom: '12px', overflow: 'hidden'
+                      }}>
+                        {editingMeetingNoteId === m.id ? (
+                          <div style={{ padding: '14px', display: 'grid', gap: '8px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                              <input value={meetingNoteDraft.title} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, title: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <input type="date" value={meetingNoteDraft.meeting_date ? String(meetingNoteDraft.meeting_date).slice(0, 10) : ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, meeting_date: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                            </div>
+                            <textarea placeholder="Status update / notes" value={meetingNoteDraft.body || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, body: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '60px', fontFamily: 'Roboto, sans-serif' }} />
+                            <textarea placeholder="Risks & decisions" value={meetingNoteDraft.risks_decisions || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, risks_decisions: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }} />
+                            <textarea placeholder="Monitor & control notes" value={meetingNoteDraft.monitor_control || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, monitor_control: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }} />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <input placeholder="Attendees (comma separated)" value={meetingNoteDraft.attendees || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, attendees: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                              <input placeholder="Action items (comma separated)" value={meetingNoteDraft.action_items || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, action_items: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                              <select value={meetingNoteDraft.customer_satisfaction} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, customer_satisfaction: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                                <option value="na">N/A</option><option value="green">On Track</option><option value="yellow">At Risk</option><option value="red">Critical</option>
+                              </select>
+                              <select value={meetingNoteDraft.scope_status} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, scope_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                                <option value="na">N/A</option><option value="green">On Track</option><option value="yellow">At Risk</option><option value="red">Critical</option>
+                              </select>
+                              <select value={meetingNoteDraft.budget_quality_status} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, budget_quality_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                                <option value="na">N/A</option><option value="green">On Track</option><option value="yellow">At Risk</option><option value="red">Critical</option>
+                              </select>
+                              <select value={meetingNoteDraft.on_time_status} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, on_time_status: e.target.value })} style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}>
+                                <option value="na">N/A</option><option value="green">On Track</option><option value="yellow">At Risk</option><option value="red">Critical</option>
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => saveMeetingNote(m.id)} style={{ padding: '6px 14px', background: '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                              <button onClick={() => setEditingMeetingNoteId(null)} style={{ padding: '6px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setOpenMeetingNoteId(openMeetingNoteId === m.id ? null : m.id)}
+                              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px' }}
+                            >
+                              <div style={{ width: '46px', height: '46px', borderRadius: '8px', background: '#323E48', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>
+                                  {m.meeting_date ? new Date(m.meeting_date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '—'}
+                                </div>
+                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', fontFamily: 'Oswald, sans-serif' }}>
+                                  {m.meeting_date ? new Date(m.meeting_date).getDate() : '—'}
+                                </div>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#323E48', marginBottom: '4px' }}>{m.title}</p>
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                  {[
+                                    ['Sat', m.customer_satisfaction], ['Scope', m.scope_status],
+                                    ['Bud/Qual', m.budget_quality_status], ['On-Time', m.on_time_status],
+                                  ].map(([label, val]: any) => (
+                                    <span key={label} style={{
+                                      fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '3px',
+                                      textTransform: 'uppercase', letterSpacing: '.3px', fontFamily: 'Oswald, sans-serif',
+                                      background: statusBg(val), color: statusColor(val)
+                                    }}>
+                                      {label}: {statusLabel(val)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: '12px', color: '#8a9199' }}>{openMeetingNoteId === m.id ? '▲' : '▼'}</span>
+                            </button>
+                            {openMeetingNoteId === m.id && (
+                              <div style={{ padding: '0 16px 16px', borderTop: '1px solid #EAECEE' }}>
+                                {m.body && (
+                                  <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                                    <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Status Update</p>
+                                    <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{m.body}</p>
+                                  </div>
+                                )}
+                                {m.risks_decisions && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Risks & Decisions</p>
+                                    <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{m.risks_decisions}</p>
+                                  </div>
+                                )}
+                                {m.monitor_control && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Monitor & Control</p>
+                                    <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{m.monitor_control}</p>
+                                  </div>
+                                )}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                  {m.attendees && m.attendees.length > 0 && (
+                                    <div>
+                                      <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Attendees</p>
+                                      {m.attendees.map((attendee: string, ai: number) => (
+                                        <p key={ai} style={{ fontSize: '11px', color: '#323E48', marginBottom: '4px' }}>👤 {attendee}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {m.action_items && m.action_items.length > 0 && (
+                                    <div>
+                                      <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Action Items</p>
+                                      {m.action_items.map((item: string, ai: number) => (
+                                        <p key={ai} style={{ fontSize: '11px', color: '#323E48', marginBottom: '4px' }}>☐ {item}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: '10px', color: '#8a9199', marginTop: '12px' }}>By {m.author}</p>
+                                {isAdmin && (
+                                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #EAECEE' }}>
+                                    <button
+                                      onClick={() => { setEditingMeetingNoteId(m.id); setMeetingNoteDraft({ ...m, attendees: joinList(m.attendees), action_items: joinList(m.action_items) }) }}
+                                      style={{ padding: '6px 14px', background: '#fff', color: '#00538C', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => deleteMeetingNote(m.id)}
+                                      style={{ padding: '6px 14px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     ))}
