@@ -66,6 +66,14 @@ export async function GET() {
        ORDER BY created_at DESC`,
       [user.tenantId]
     )
+    const meetingNotes = await pool.query(
+      `SELECT id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author, created_at,
+              customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control
+       FROM meeting_notes
+       WHERE tenant_id = $1
+       ORDER BY meeting_date DESC NULLS LAST, created_at DESC`,
+      [user.tenantId]
+    )
     return NextResponse.json({
       isAdmin: user.role === 'admin',
       projects: projects.rows,
@@ -75,7 +83,8 @@ export async function GET() {
       budgetLineItems: budgetLineItems.rows,
       billingCharges: billingCharges.rows,
       sopItems: sopItems.rows,
-      documents: documents.rows
+      documents: documents.rows,
+      meetingNotes: meetingNotes.rows
     })
   } catch (error) {
     return NextResponse.json(
