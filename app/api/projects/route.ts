@@ -36,7 +36,7 @@ export async function GET() {
       [user.tenantId]
     )
     const appointments = await pool.query(
-      `SELECT id, project_id, title, consultant, scheduled_at, location, session_type
+      `SELECT id, project_id, title, consultant, scheduled_at, location, session_type, notes
        FROM appointments
        WHERE tenant_id = $1
        ORDER BY scheduled_at ASC`,
