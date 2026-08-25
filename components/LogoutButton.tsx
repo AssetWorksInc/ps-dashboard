@@ -1,5 +1,4 @@
 'use client'
-
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -23,10 +22,6 @@ export default function LogoutButton() {
       onClick={handleLogout}
       disabled={loggingOut}
       style={{
-        position: 'fixed',
-        top: '16px',
-        right: '16px',
-        zIndex: 100,
         background: '#A50021',
         border: 'none',
         borderRadius: '6px',
