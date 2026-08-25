@@ -1,13 +1,10 @@
 'use client'
-
 import { useState } from 'react'
-
 const TEAM = [
   { name: 'Amanda Rivera', role: 'Dedicated CSM', initials: 'AR', color: '#0D7C66', status: 'online' },
   { name: 'James Thornton', role: 'Senior Consultant', initials: 'JT', color: '#2E86C1', status: 'away' },
   { name: 'Chris Nguyen', role: 'Integration Specialist', initials: 'CN', color: '#1B2A4A', status: 'online' },
 ]
-
 const AI_REPLIES: { keywords: string[], reply: string }[] = [
   {
     keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon'],
@@ -39,7 +36,7 @@ const AI_REPLIES: { keywords: string[], reply: string }[] = [
   },
   {
     keywords: ['training', 'learn', 'guide', 'tutorial', 'video'],
-    reply: 'Your training library includes 3 recorded sessions and 3 training materials. The most recent is the AiM Work Management Admin Training (90 min) presented by James Thornton. Visit the Training & Learning section for the full library.'
+    reply: 'Your Resource Center includes 3 recorded sessions and 7 training materials — covering System Configuration, ETL Guides, SOPs, Implementation Resources, Work Management, Onboarding, and Best Practices. The most recent session is Work Management — Admin Training (90 min) presented by James Thornton. Visit the Resource Center for the full library.'
   },
   {
     keywords: ['document', 'file', 'upload', 'download', 'report'],
@@ -47,7 +44,7 @@ const AI_REPLIES: { keywords: string[], reply: string }[] = [
   },
   {
     keywords: ['knowledge', 'sop', 'procedure', 'guide', 'etl'],
-    reply: 'Your Knowledge Base has 3 sections: Visualize Documentation, ETL Guides, and SOPs & Implementation Resources. The most recently updated SOP is Emergency Work Order Escalation v3.1 (June 3, 2026).'
+    reply: 'The Resource Center\'s Training Materials tab covers System Configuration, ETL Guides, SOPs, Implementation Resources, Work Management, Onboarding, and Best Practices. The most recent SOP is Emergency Work Order Escalation v3.1.'
   },
   {
     keywords: ['urgent', 'emergency', 'critical', 'down', 'outage', 'problem'],
@@ -70,9 +67,7 @@ const AI_REPLIES: { keywords: string[], reply: string }[] = [
     reply: 'For login and access issues please contact your institution\'s IT team. For AiM-specific access and role management Chris Nguyen can assist. Would you like to send him a message?'
   },
 ]
-
 const DEFAULT_REPLY = 'Thanks for your message. I\'m the PS AI assistant for Lakewood State University. I can help with project status, deliverables, scheduling, integrations, and general questions. For complex issues I\'ll connect you with your PS team. Could you provide more details about what you need help with?'
-
 interface Message {
   id: string
   from: 'user' | 'agent' | 'ai'
@@ -80,7 +75,6 @@ interface Message {
   time: string
   agent?: string
 }
-
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
@@ -97,7 +91,6 @@ export default function ChatWidget() {
       time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     }
   ])
-
   const getAIReply = (text: string): string => {
     const lower = text.toLowerCase()
     for (const item of AI_REPLIES) {
@@ -107,27 +100,22 @@ export default function ChatWidget() {
     }
     return DEFAULT_REPLY
   }
-
   const sendMessage = () => {
     if (!input.trim()) return
-
     const userMsg: Message = {
       id: Date.now().toString(),
       from: 'user',
       text: input.trim(),
       time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     }
-
     const userText = input.trim()
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setTyping(true)
-
     setTimeout(() => {
       const replyText = mode === 'ai'
         ? getAIReply(userText)
         : `Thanks for your message. ${activeAgent.name} will respond shortly. ${activeAgent.status === 'away' ? 'They are currently away but will reply within 2 hours.' : 'They are online now.'}`
-
       const reply: Message = {
         id: (Date.now() + 1).toString(),
         from: mode === 'ai' ? 'ai' : 'agent',
@@ -139,7 +127,6 @@ export default function ChatWidget() {
       setTyping(false)
     }, 1200)
   }
-
   const switchAgent = (agent: typeof TEAM[0]) => {
     setActiveAgent(agent)
     setMode('agent')
@@ -152,7 +139,6 @@ export default function ChatWidget() {
       agent: agent.name
     }])
   }
-
   const switchToAI = () => {
     setMode('ai')
     setView('chat')
@@ -163,15 +149,12 @@ export default function ChatWidget() {
       time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     }])
   }
-
   const initials = (name: string) =>
     name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
-
   const avatarColor = (name: string) => {
     const colors = ['#1B2A4A', '#0D7C66', '#2E86C1', '#B7791F', '#276749']
     return colors[name.charCodeAt(0) % colors.length]
   }
-
   return (
     <>
       {/* Floating button */}
@@ -200,7 +183,6 @@ export default function ChatWidget() {
           💬
         </button>
       )}
-
       {/* Chat panel */}
       {open && (
         <div style={{
@@ -214,7 +196,6 @@ export default function ChatWidget() {
           zIndex: 1000,
           overflow: 'hidden'
         }}>
-
           {/* Header */}
           <div style={{
             background: '#1B2A4A',
@@ -238,7 +219,6 @@ export default function ChatWidget() {
                 background: '#10b981', border: '2px solid #1B2A4A'
               }} />
             </div>
-
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9', marginBottom: '1px' }}>
                 {mode === 'ai' ? 'PS AI Assistant' : activeAgent.name}
@@ -247,7 +227,6 @@ export default function ChatWidget() {
                 {mode === 'ai' ? '🟢 AI · Always available' : activeAgent.status === 'online' ? '🟢 Online now' : '🟡 Away · replies in 2hrs'}
               </p>
             </div>
-
             {/* Header buttons */}
             <div style={{ display: 'flex', gap: '4px' }}>
               <button
@@ -273,7 +252,6 @@ export default function ChatWidget() {
               </button>
             </div>
           </div>
-
           {/* Mode switcher */}
           {!minimized && (
             <div style={{ display: 'flex', background: '#F7F8FA', borderBottom: '1px solid #E2E8F0' }}>
@@ -303,7 +281,6 @@ export default function ChatWidget() {
               </button>
             </div>
           )}
-
           {/* Body */}
           {!minimized && (
             <>
@@ -313,7 +290,6 @@ export default function ChatWidget() {
                   <p style={{ fontSize: '11px', fontWeight: 700, color: '#4A5568', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
                     Your PS Team
                   </p>
-
                   {/* AI option */}
                   <button
                     onClick={switchToAI}
@@ -338,7 +314,6 @@ export default function ChatWidget() {
                       <span style={{ fontSize: '9px', background: '#0D7C66', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>ACTIVE</span>
                     )}
                   </button>
-
                   {/* Team members */}
                   {TEAM.map((member, i) => (
                     <button
@@ -370,7 +345,6 @@ export default function ChatWidget() {
                   ))}
                 </div>
               )}
-
               {/* CHAT VIEW */}
               {view === 'chat' && (
                 <>
@@ -403,7 +377,6 @@ export default function ChatWidget() {
                         </p>
                       </div>
                     ))}
-
                     {/* Typing indicator */}
                     {typing && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -420,7 +393,6 @@ export default function ChatWidget() {
                       </div>
                     )}
                   </div>
-
                   {/* Quick suggestions — AI mode only */}
                   {mode === 'ai' && messages.length <= 2 && (
                     <div style={{ padding: '8px 14px', background: '#ffffff', borderTop: '1px solid #E2E8F0' }}>
@@ -471,7 +443,6 @@ export default function ChatWidget() {
                       </div>
                     </div>
                   )}
-
                   {/* Input */}
                   <div style={{ padding: '10px 12px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '8px', alignItems: 'flex-end', background: '#ffffff' }}>
                     <textarea
@@ -505,7 +476,6 @@ export default function ChatWidget() {
                       ➤
                     </button>
                   </div>
-
                   {/* Footer */}
                   <div style={{ padding: '6px 16px', background: '#F7F8FA', borderTop: '1px solid #E2E8F0', textAlign: 'center' }}>
                     <p style={{ fontSize: '9px', color: '#94a3b8' }}>
