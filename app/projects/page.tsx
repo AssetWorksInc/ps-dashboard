@@ -613,11 +613,11 @@ export default function ProjectCenter() {
       <div style={{ padding: '24px 28px 60px' }}>
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
-          {[
+                 {[
             { label: 'Active Projects', value: data?.projects?.length || 0, color: '#A50021' },
-            { label: 'On Track', value: data?.projects?.filter((p: any) => p.health === 'green').length || 0, color: '#2E7D32' },
-            { label: 'At Risk', value: data?.projects?.filter((p: any) => p.health === 'amber').length || 0, color: '#8a6400' },
-            { label: 'Total Deliverables', value: data?.deliverables?.length || 0, color: '#00538C' },
+            { label: 'On Track', value: data?.projects?.filter((p: any) => p.health === 'green').length || 0, color: '#A50021' },
+            { label: 'At Risk', value: data?.projects?.filter((p: any) => p.health === 'amber').length || 0, color: '#A50021' },
+            { label: 'Critical', value: data?.projects?.filter((p: any) => p.health === 'red').length || 0, color: '#A50021' },
           ].map((k, i) => (
             <div key={i} style={{
               background: '#ffffff', border: '1px solid #CCCCCC',
