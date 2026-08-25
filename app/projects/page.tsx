@@ -626,13 +626,15 @@ export default function ProjectCenter() {
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Top bar */}
-    <div style={{
-  background: '#ffffff',
-  borderBottom: '4px solid #A50021',
-  padding: '14px 150px 14px 28px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between'
+          <div style={{
+        background: '#ffffff',
+        borderBottom: '4px solid #A50021',
+        padding: '14px 150px 14px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div>
 }}>
       }}>
         <div>
