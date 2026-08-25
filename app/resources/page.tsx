@@ -218,7 +218,7 @@ export default function ResourcesPage() {
 
   return (
     <div style={{ padding: '26px 34px', fontFamily: 'Roboto, sans-serif', maxWidth: '1180px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '18px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '18px', paddingRight: '120px' }}>
         <div>
           <h1 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '22px', fontWeight: 600, color: C.dark, margin: 0, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Resource Center
