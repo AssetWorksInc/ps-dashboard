@@ -10,7 +10,7 @@ export async function GET() {
     }
     const result = await pool.query(
       `SELECT id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author, created_at,
-              customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control
+              customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control, notes
        FROM meeting_notes
        WHERE tenant_id = $1
        ORDER BY meeting_date DESC NULLS LAST, created_at DESC`,
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const {
       title, body: statusUpdate, risks_decisions, meeting_date,
       attendees, action_items, project_id,
-      customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control,
+      customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control, notes,
     } = body
 
     if (!title) {
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
     const result = await pool.query(
       `INSERT INTO meeting_notes
         (tenant_id, project_id, title, body, risks_decisions, meeting_date, attendees, action_items, author,
-         customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         customer_satisfaction, scope_status, budget_quality_status, on_time_status, monitor_control, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         user.tenantId,
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         budget_quality_status || 'na',
         on_time_status || 'na',
         monitor_control || null,
+        notes || null,
       ]
     )
 
