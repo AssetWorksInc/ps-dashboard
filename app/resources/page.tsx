@@ -65,6 +65,32 @@ export default function ResourcesPage() {
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null)
   const [materialDraft, setMaterialDraft] = useState<any>(emptyMaterial)
 
+  const [newSessionMode, setNewSessionMode] = useState<'link' | 'upload'>('link')
+  const [editSessionMode, setEditSessionMode] = useState<'link' | 'upload'>('link')
+  const [newMaterialMode, setNewMaterialMode] = useState<'link' | 'upload'>('link')
+  const [editMaterialMode, setEditMaterialMode] = useState<'link' | 'upload'>('link')
+  const [uploadingFile, setUploadingFile] = useState(false)
+
+  async function handleFileUpload(file: File): Promise<{ file_url: string; file_type: string } | null> {
+    setUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/resource-upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.success) {
+        return { file_url: data.file_url, file_type: data.file_type }
+      }
+      alert(`Upload failed: ${data.error}`)
+      return null
+    } catch (err) {
+      alert('Upload failed. Please try again.')
+      return null
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
   function refresh() {
     fetch('/api/resources').then(r => r.json()).then(d => {
       setData(d)
@@ -107,6 +133,7 @@ export default function ResourcesPage() {
     if (res.ok) {
       setNewSession(emptySession)
       setAddingSession(false)
+      setNewSessionMode('link')
       refresh()
     }
   }
@@ -122,6 +149,7 @@ export default function ResourcesPage() {
       presenter: s.presenter || '',
       is_published: s.is_published !== false,
     })
+    setEditSessionMode('link')
   }
 
   async function saveSession(id: string) {
@@ -152,6 +180,7 @@ export default function ResourcesPage() {
     if (res.ok) {
       setNewMaterial(emptyMaterial)
       setAddingMaterial(false)
+      setNewMaterialMode('link')
       refresh()
     }
   }
@@ -166,6 +195,7 @@ export default function ResourcesPage() {
       category: m.category || '',
       author: m.author || '',
     })
+    setEditMaterialMode('link')
   }
 
   async function saveMaterial(id: string) {
@@ -289,8 +319,30 @@ export default function ResourcesPage() {
               <input style={inputStyle} value={newSession.type} onChange={e => setNewSession({ ...newSession, type: e.target.value })} placeholder="recorded, webinar, training" />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Video URL</label>
-              <input style={inputStyle} value={newSession.video_url} onChange={e => setNewSession({ ...newSession, video_url: e.target.value })} />
+              <label style={labelStyle}>Video</label>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                <button type="button" style={newSessionMode === 'link' ? primaryBtn : secondaryBtn} onClick={() => setNewSessionMode('link')}>🔗 Link</button>
+                <button type="button" style={newSessionMode === 'upload' ? primaryBtn : secondaryBtn} onClick={() => setNewSessionMode('upload')}>📤 Upload</button>
+              </div>
+              {newSessionMode === 'link' ? (
+                <input style={inputStyle} value={newSession.video_url} onChange={e => setNewSession({ ...newSession, video_url: e.target.value })} placeholder="https://..." />
+              ) : (
+                <input
+                  type="file"
+                  accept="video/*,.mp4,.mov,.webm,.m4v"
+                  style={inputStyle}
+                  onChange={async e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const result = await handleFileUpload(file)
+                    if (result) setNewSession({ ...newSession, video_url: result.file_url })
+                  }}
+                />
+              )}
+              {uploadingFile && <div style={{ fontSize: '11px', color: C.lightGray, marginTop: '4px' }}>Uploading...</div>}
+              {newSessionMode === 'upload' && newSession.video_url && !uploadingFile && (
+                <div style={{ fontSize: '11px', color: C.green, marginTop: '4px' }}>✓ Uploaded: {newSession.video_url}</div>
+              )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Description</label>
@@ -299,7 +351,7 @@ export default function ResourcesPage() {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button style={primaryBtn} onClick={createSession}>Save</button>
-            <button style={secondaryBtn} onClick={() => { setAddingSession(false); setNewSession(emptySession) }}>Cancel</button>
+            <button style={secondaryBtn} onClick={() => { setAddingSession(false); setNewSession(emptySession); setNewSessionMode('link') }}>Cancel</button>
           </div>
         </div>
       )}
@@ -327,8 +379,30 @@ export default function ResourcesPage() {
               <input style={inputStyle} value={newMaterial.author} onChange={e => setNewMaterial({ ...newMaterial, author: e.target.value })} />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>File URL</label>
-              <input style={inputStyle} value={newMaterial.file_url} onChange={e => setNewMaterial({ ...newMaterial, file_url: e.target.value })} />
+              <label style={labelStyle}>File</label>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                <button type="button" style={newMaterialMode === 'link' ? primaryBtn : secondaryBtn} onClick={() => setNewMaterialMode('link')}>🔗 Link</button>
+                <button type="button" style={newMaterialMode === 'upload' ? primaryBtn : secondaryBtn} onClick={() => setNewMaterialMode('upload')}>📤 Upload</button>
+              </div>
+              {newMaterialMode === 'link' ? (
+                <input style={inputStyle} value={newMaterial.file_url} onChange={e => setNewMaterial({ ...newMaterial, file_url: e.target.value })} placeholder="https://..." />
+              ) : (
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg"
+                  style={inputStyle}
+                  onChange={async e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const result = await handleFileUpload(file)
+                    if (result) setNewMaterial({ ...newMaterial, file_url: result.file_url, type: newMaterial.type || result.file_type })
+                  }}
+                />
+              )}
+              {uploadingFile && <div style={{ fontSize: '11px', color: C.lightGray, marginTop: '4px' }}>Uploading...</div>}
+              {newMaterialMode === 'upload' && newMaterial.file_url && !uploadingFile && (
+                <div style={{ fontSize: '11px', color: C.green, marginTop: '4px' }}>✓ Uploaded: {newMaterial.file_url}</div>
+              )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Description</label>
@@ -337,7 +411,7 @@ export default function ResourcesPage() {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button style={primaryBtn} onClick={createMaterial}>Save</button>
-            <button style={secondaryBtn} onClick={() => { setAddingMaterial(false); setNewMaterial(emptyMaterial) }}>Cancel</button>
+            <button style={secondaryBtn} onClick={() => { setAddingMaterial(false); setNewMaterial(emptyMaterial); setNewMaterialMode('link') }}>Cancel</button>
           </div>
         </div>
       )}
@@ -352,7 +426,26 @@ export default function ResourcesPage() {
                   <textarea style={{ ...inputStyle, minHeight: '50px', marginBottom: '8px' }} value={sessionDraft.description} onChange={e => setSessionDraft({ ...sessionDraft, description: e.target.value })} />
                   <input style={{ ...inputStyle, marginBottom: '8px' }} value={sessionDraft.presenter} onChange={e => setSessionDraft({ ...sessionDraft, presenter: e.target.value })} placeholder="Presenter" />
                   <input style={{ ...inputStyle, marginBottom: '8px' }} value={sessionDraft.duration_min} onChange={e => setSessionDraft({ ...sessionDraft, duration_min: e.target.value })} placeholder="Duration (min)" />
-                  <input style={{ ...inputStyle, marginBottom: '8px' }} value={sessionDraft.video_url} onChange={e => setSessionDraft({ ...sessionDraft, video_url: e.target.value })} placeholder="Video URL" />
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                    <button type="button" style={editSessionMode === 'link' ? primaryBtn : secondaryBtn} onClick={() => setEditSessionMode('link')}>🔗 Link</button>
+                    <button type="button" style={editSessionMode === 'upload' ? primaryBtn : secondaryBtn} onClick={() => setEditSessionMode('upload')}>📤 Upload</button>
+                  </div>
+                  {editSessionMode === 'link' ? (
+                    <input style={{ ...inputStyle, marginBottom: '8px' }} value={sessionDraft.video_url} onChange={e => setSessionDraft({ ...sessionDraft, video_url: e.target.value })} placeholder="Video URL" />
+                  ) : (
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.mov,.webm,.m4v"
+                      style={{ ...inputStyle, marginBottom: '8px' }}
+                      onChange={async e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const result = await handleFileUpload(file)
+                        if (result) setSessionDraft({ ...sessionDraft, video_url: result.file_url })
+                      }}
+                    />
+                  )}
+                  {uploadingFile && <div style={{ fontSize: '11px', color: C.lightGray, marginBottom: '8px' }}>Uploading...</div>}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button style={primaryBtn} onClick={() => saveSession(s.id)}>Save</button>
                     <button style={secondaryBtn} onClick={() => setEditingSessionId(null)}>Cancel</button>
@@ -403,7 +496,26 @@ export default function ResourcesPage() {
                   <textarea style={{ ...inputStyle, minHeight: '50px', marginBottom: '8px' }} value={materialDraft.description} onChange={e => setMaterialDraft({ ...materialDraft, description: e.target.value })} />
                   <input style={{ ...inputStyle, marginBottom: '8px' }} value={materialDraft.category} onChange={e => setMaterialDraft({ ...materialDraft, category: e.target.value })} placeholder="Category" />
                   <input style={{ ...inputStyle, marginBottom: '8px' }} value={materialDraft.author} onChange={e => setMaterialDraft({ ...materialDraft, author: e.target.value })} placeholder="Author" />
-                  <input style={{ ...inputStyle, marginBottom: '8px' }} value={materialDraft.file_url} onChange={e => setMaterialDraft({ ...materialDraft, file_url: e.target.value })} placeholder="File URL" />
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                    <button type="button" style={editMaterialMode === 'link' ? primaryBtn : secondaryBtn} onClick={() => setEditMaterialMode('link')}>🔗 Link</button>
+                    <button type="button" style={editMaterialMode === 'upload' ? primaryBtn : secondaryBtn} onClick={() => setEditMaterialMode('upload')}>📤 Upload</button>
+                  </div>
+                  {editMaterialMode === 'link' ? (
+                    <input style={{ ...inputStyle, marginBottom: '8px' }} value={materialDraft.file_url} onChange={e => setMaterialDraft({ ...materialDraft, file_url: e.target.value })} placeholder="File URL" />
+                  ) : (
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg"
+                      style={{ ...inputStyle, marginBottom: '8px' }}
+                      onChange={async e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const result = await handleFileUpload(file)
+                        if (result) setMaterialDraft({ ...materialDraft, file_url: result.file_url })
+                      }}
+                    />
+                  )}
+                  {uploadingFile && <div style={{ fontSize: '11px', color: C.lightGray, marginBottom: '8px' }}>Uploading...</div>}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button style={primaryBtn} onClick={() => saveMaterial(m.id)}>Save</button>
                     <button style={secondaryBtn} onClick={() => setEditingMaterialId(null)}>Cancel</button>
