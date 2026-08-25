@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import NotesEditor from '@/components/NotesEditor'
 export default function ProjectCenter() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -58,7 +59,7 @@ export default function ProjectCenter() {
   const emptyMeetingNote = {
     title: '', body: '', meeting_date: '', risks_decisions: '', monitor_control: '',
     attendees: '', action_items: '',
-    customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na',
+    customer_satisfaction: 'na', scope_status: 'na', budget_quality_status: 'na', on_time_status: 'na', notes: ''
   }
   const [addingMeetingNote, setAddingMeetingNote] = useState(false)
   const [newMeetingNote, setNewMeetingNote] = useState<any>(emptyMeetingNote)
@@ -573,6 +574,7 @@ export default function ProjectCenter() {
         meeting_date: newMeetingNote.meeting_date || null,
         risks_decisions: newMeetingNote.risks_decisions || null,
         monitor_control: newMeetingNote.monitor_control || null,
+        notes: meetingNoteDraft.notes || null,
         attendees: splitList(newMeetingNote.attendees),
         action_items: splitList(newMeetingNote.action_items),
         customer_satisfaction: newMeetingNote.customer_satisfaction,
@@ -1994,12 +1996,16 @@ export default function ProjectCenter() {
                           onChange={e => setNewMeetingNote({ ...newMeetingNote, risks_decisions: e.target.value })}
                           style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }}
                         />
-                        <textarea
+                          <textarea
                           placeholder="Monitor & control notes"
                           value={newMeetingNote.monitor_control}
                           onChange={e => setNewMeetingNote({ ...newMeetingNote, monitor_control: e.target.value })}
                           style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }}
                         />
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Notes</label>
+                          <NotesEditor value={newMeetingNote.notes} onChange={html => setNewMeetingNote({ ...newMeetingNote, notes: html })} />
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           <input
                             placeholder="Attendees (comma separated)"
@@ -2086,7 +2092,11 @@ export default function ProjectCenter() {
                             </div>
                             <textarea placeholder="Status update / notes" value={meetingNoteDraft.body || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, body: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '60px', fontFamily: 'Roboto, sans-serif' }} />
                             <textarea placeholder="Risks & decisions" value={meetingNoteDraft.risks_decisions || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, risks_decisions: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }} />
-                            <textarea placeholder="Monitor & control notes" value={meetingNoteDraft.monitor_control || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, monitor_control: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }} />
+                              <textarea placeholder="Monitor & control notes" value={meetingNoteDraft.monitor_control || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, monitor_control: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px', resize: 'vertical', minHeight: '44px', fontFamily: 'Roboto, sans-serif' }} />
+                            <div>
+                              <label style={{ fontSize: '10px', color: '#8a9199', display: 'block', marginBottom: '4px' }}>Notes</label>
+                              <NotesEditor value={meetingNoteDraft.notes} onChange={html => setMeetingNoteDraft({ ...meetingNoteDraft, notes: html })} />
+                            </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                               <input placeholder="Attendees (comma separated)" value={meetingNoteDraft.attendees || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, attendees: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
                               <input placeholder="Action items (comma separated)" value={meetingNoteDraft.action_items || ''} onChange={e => setMeetingNoteDraft({ ...meetingNoteDraft, action_items: e.target.value })} style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }} />
@@ -2157,10 +2167,16 @@ export default function ProjectCenter() {
                                     <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{m.risks_decisions}</p>
                                   </div>
                                 )}
-                                {m.monitor_control && (
+                                                             {m.monitor_control && (
                                   <div style={{ marginBottom: '12px' }}>
                                     <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Monitor & Control</p>
                                     <p style={{ fontSize: '12px', color: '#697077', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{m.monitor_control}</p>
+                                  </div>
+                                )}
+                                {m.notes && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#A50021', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Notes</p>
+                                    <NotesEditor value={m.notes} editable={false} />
                                   </div>
                                 )}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
