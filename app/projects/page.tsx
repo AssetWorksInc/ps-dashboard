@@ -11,7 +11,6 @@ export default function ProjectCenter() {
   const [showNewProject, setShowNewProject] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
-
   // Budget tab state
   const [budgetSaving, setBudgetSaving] = useState(false)
   const [editingBudgetSettings, setEditingBudgetSettings] = useState(false)
@@ -24,37 +23,31 @@ export default function ProjectCenter() {
   const [newCharge, setNewCharge] = useState({ description: '', hours: '', rate: '', amount: '', charge_date: '' })
   const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
   const [chargeDraft, setChargeDraft] = useState<any>({})
-
   // SOP checklist tab state
   const [addingSopItem, setAddingSopItem] = useState(false)
   const [newSopItem, setNewSopItem] = useState({ title: '', description: '', due_date: '' })
   const [editingSopItemId, setEditingSopItemId] = useState<string | null>(null)
   const [sopItemDraft, setSopItemDraft] = useState<any>({})
-
   // SOP reference document attachment state
   const [addingSopDoc, setAddingSopDoc] = useState(false)
   const [sopDocTitle, setSopDocTitle] = useState('')
   const [sopDocFile, setSopDocFile] = useState<File | null>(null)
   const [uploadingSopDoc, setUploadingSopDoc] = useState(false)
-
   // Schedule tab state
   const [addingAppt, setAddingAppt] = useState(false)
   const [newAppt, setNewAppt] = useState({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' })
   const [editingApptId, setEditingApptId] = useState<string | null>(null)
   const [apptDraft, setApptDraft] = useState<any>({})
-
   // Deliverables tab state
   const [addingDeliverable, setAddingDeliverable] = useState(false)
   const [newDeliverable, setNewDeliverable] = useState({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' })
   const [editingDeliverableId, setEditingDeliverableId] = useState<string | null>(null)
   const [deliverableDraft, setDeliverableDraft] = useState<any>({})
-
   // Customer Contacts tab state
   const [addingContact, setAddingContact] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', role: '', email: '', phone: '', is_primary: false })
   const [editingContactId, setEditingContactId] = useState<string | null>(null)
   const [contactDraft, setContactDraft] = useState<any>({})
-
   // Status Meeting Notes tab state
   const emptyMeetingNote = {
     title: '', body: '', meeting_date: '', risks_decisions: '', monitor_control: '',
@@ -66,7 +59,6 @@ export default function ProjectCenter() {
   const [editingMeetingNoteId, setEditingMeetingNoteId] = useState<string | null>(null)
   const [meetingNoteDraft, setMeetingNoteDraft] = useState<any>({})
   const [openMeetingNoteId, setOpenMeetingNoteId] = useState<string | null>(null)
-
   function loadProjects() {
     return fetch('/api/projects')
       .then(r => r.json())
@@ -75,7 +67,6 @@ export default function ProjectCenter() {
         return d
       })
   }
-
   useEffect(() => {
     loadProjects()
       .then(d => {
@@ -84,9 +75,7 @@ export default function ProjectCenter() {
       })
       .catch(() => setLoading(false))
   }, [])
-
   const isAdmin = !!data?.isAdmin
-
   async function createProject() {
     if (!newProject.name.trim()) return
     setCreating(true)
@@ -108,7 +97,6 @@ export default function ProjectCenter() {
       setCreating(false)
     }
   }
-
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'Roboto, sans-serif' }}>
       <div style={{ fontSize: '32px' }}>⏳</div>
@@ -204,7 +192,6 @@ export default function ProjectCenter() {
     }
     setSaving(false)
   }
-
   async function saveBudgetSettings() {
     setBudgetSaving(true)
     try {
@@ -228,7 +215,6 @@ export default function ProjectCenter() {
       setBudgetSaving(false)
     }
   }
-
   async function createLineItem() {
     if (!newLineItem.activity_name.trim()) return
     const res = await fetch('/api/budget-line-items', {
@@ -248,7 +234,6 @@ export default function ProjectCenter() {
       setNewLineItem({ activity_name: '', hours_planned: '', hours_worked: '' })
     }
   }
-
   async function saveLineItem(id: string) {
     const res = await fetch(`/api/budget-line-items/${id}`, {
       method: 'PATCH',
@@ -265,14 +250,12 @@ export default function ProjectCenter() {
       setEditingLineItemId(null)
     }
   }
-
   async function deleteLineItem(id: string) {
     if (!confirm('Delete this budget line item?')) return
     const res = await fetch(`/api/budget-line-items/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function createCharge() {
     if (!newCharge.description.trim()) return
     const res = await fetch('/api/billing-charges', {
@@ -294,7 +277,6 @@ export default function ProjectCenter() {
       setNewCharge({ description: '', hours: '', rate: '', amount: '', charge_date: '' })
     }
   }
-
   async function saveCharge(id: string) {
     const res = await fetch(`/api/billing-charges/${id}`, {
       method: 'PATCH',
@@ -313,14 +295,12 @@ export default function ProjectCenter() {
       setEditingChargeId(null)
     }
   }
-
   async function deleteCharge(id: string) {
     if (!confirm('Delete this billing charge?')) return
     const res = await fetch(`/api/billing-charges/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function toggleSopItem(item: any) {
     const nextStatus = item.status === 'complete' ? 'not-started' : 'complete'
     const res = await fetch(`/api/sop-items/${item.id}`, {
@@ -331,7 +311,6 @@ export default function ProjectCenter() {
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function createSopItem() {
     if (!newSopItem.title.trim()) return
     const res = await fetch('/api/sop-items', {
@@ -351,7 +330,6 @@ export default function ProjectCenter() {
       setNewSopItem({ title: '', description: '', due_date: '' })
     }
   }
-
   async function saveSopItem(id: string) {
     const res = await fetch(`/api/sop-items/${id}`, {
       method: 'PATCH',
@@ -368,14 +346,12 @@ export default function ProjectCenter() {
       setEditingSopItemId(null)
     }
   }
-
   async function deleteSopItem(id: string) {
     if (!confirm('Delete this checklist item?')) return
     const res = await fetch(`/api/sop-items/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function uploadSopDocument() {
     if (!sopDocFile) return
     setUploadingSopDoc(true)
@@ -397,7 +373,6 @@ export default function ProjectCenter() {
       setUploadingSopDoc(false)
     }
   }
-
   async function deleteSopDocument(id: string) {
     if (!confirm('Delete this document?')) return
     const res = await fetch('/api/documents/delete', {
@@ -408,7 +383,6 @@ export default function ProjectCenter() {
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function createAppointment() {
     if (!newAppt.title.trim() || !newAppt.scheduled_at) return
     const res = await fetch('/api/appointments', {
@@ -431,7 +405,6 @@ export default function ProjectCenter() {
       setNewAppt({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' })
     }
   }
-
   async function saveAppointment(id: string) {
     const res = await fetch(`/api/appointments/${id}`, {
       method: 'PATCH',
@@ -451,14 +424,12 @@ export default function ProjectCenter() {
       setEditingApptId(null)
     }
   }
-
   async function deleteAppointment(id: string) {
     if (!confirm('Delete this appointment?')) return
     const res = await fetch(`/api/appointments/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function createDeliverable() {
     if (!newDeliverable.name.trim() || !newDeliverable.category.trim()) return
     const res = await fetch('/api/deliverables', {
@@ -480,7 +451,6 @@ export default function ProjectCenter() {
       setNewDeliverable({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' })
     }
   }
-
   async function saveDeliverable(id: string) {
     const res = await fetch(`/api/deliverables/${id}`, {
       method: 'PATCH',
@@ -499,14 +469,12 @@ export default function ProjectCenter() {
       setEditingDeliverableId(null)
     }
   }
-
   async function deleteDeliverable(id: string) {
     if (!confirm('Delete this deliverable?')) return
     const res = await fetch(`/api/deliverables/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   async function createContact() {
     if (!newContact.name.trim()) return
     const res = await fetch('/api/project-contacts', {
@@ -528,7 +496,6 @@ export default function ProjectCenter() {
       setNewContact({ name: '', role: '', email: '', phone: '', is_primary: false })
     }
   }
-
   async function saveContact(id: string) {
     const res = await fetch(`/api/project-contacts/${id}`, {
       method: 'PATCH',
@@ -547,21 +514,18 @@ export default function ProjectCenter() {
       setEditingContactId(null)
     }
   }
-
   async function deleteContact(id: string) {
     if (!confirm('Delete this contact?')) return
     const res = await fetch(`/api/project-contacts/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   function splitList(v: string): string[] {
     return String(v || '').split(',').map(s => s.trim()).filter(Boolean)
   }
   function joinList(v: any): string {
     return Array.isArray(v) ? v.join(', ') : ''
   }
-
   async function createMeetingNote() {
     if (!newMeetingNote.title.trim()) return
     const res = await fetch('/api/meeting-notes', {
@@ -574,7 +538,7 @@ export default function ProjectCenter() {
         meeting_date: newMeetingNote.meeting_date || null,
         risks_decisions: newMeetingNote.risks_decisions || null,
         monitor_control: newMeetingNote.monitor_control || null,
-        notes: meetingNoteDraft.notes || null,
+        notes: newMeetingNote.notes || null,
         attendees: splitList(newMeetingNote.attendees),
         action_items: splitList(newMeetingNote.action_items),
         customer_satisfaction: newMeetingNote.customer_satisfaction,
@@ -590,7 +554,6 @@ export default function ProjectCenter() {
       setNewMeetingNote(emptyMeetingNote)
     }
   }
-
   async function saveMeetingNote(id: string) {
     const res = await fetch(`/api/meeting-notes/${id}`, {
       method: 'PATCH',
@@ -601,6 +564,7 @@ export default function ProjectCenter() {
         meeting_date: meetingNoteDraft.meeting_date || null,
         risks_decisions: meetingNoteDraft.risks_decisions || null,
         monitor_control: meetingNoteDraft.monitor_control || null,
+        notes: meetingNoteDraft.notes || null,
         attendees: splitList(meetingNoteDraft.attendees),
         action_items: splitList(meetingNoteDraft.action_items),
         customer_satisfaction: meetingNoteDraft.customer_satisfaction,
@@ -615,27 +579,22 @@ export default function ProjectCenter() {
       setEditingMeetingNoteId(null)
     }
   }
-
   async function deleteMeetingNote(id: string) {
     if (!confirm('Delete this status meeting note?')) return
     const res = await fetch(`/api/meeting-notes/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
-
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Top bar */}
-          <div style={{
+      <div style={{
         background: '#ffffff',
         borderBottom: '4px solid #A50021',
-        padding: '14px 150px 14px 28px',
+        padding: '14px 28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
-      }}>
-        <div>
-}}>
       }}>
         <div>
           <div style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '16px', color: '#323E48' }}>
@@ -1150,7 +1109,6 @@ export default function ProjectCenter() {
                     <div style={{ height: '8px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' }}>
                       <div style={{ height: '100%', width: `${pctUsed}%`, background: pctUsed >= 90 ? '#A50021' : pctUsed >= 70 ? '#F2A900' : '#2E7D32', borderRadius: '4px' }} />
                     </div>
-
                     {/* Budget settings editor */}
                     <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '8px', padding: '14px 16px', marginBottom: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: editingBudgetSettings ? '12px' : 0 }}>
@@ -1227,7 +1185,6 @@ export default function ProjectCenter() {
                         </p>
                       )}
                     </div>
-
                     {/* Line items */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
@@ -1316,7 +1273,6 @@ export default function ProjectCenter() {
                         ))}
                       </tbody>
                     </table>
-
                     {/* Billing charges */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
@@ -1567,7 +1523,6 @@ export default function ProjectCenter() {
                         )}
                       </div>
                     ))}
-
                     {/* Reference documents */}
                     <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #EAECEE' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
