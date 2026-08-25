@@ -6,8 +6,7 @@ import LogoutButton from './LogoutButton'
 const nav = [
   { label: 'Dashboard', href: '/', icon: '📊' },
   { label: 'Project Center', href: '/projects', icon: '📂' },
-  { label: 'Knowledge Base', href: '/knowledge', icon: '📚' },
-  { label: 'Training & Learning', href: '/training', icon: '🎓' },
+  { label: 'Resource Center', href: '/resources', icon: '📚' },
   { label: 'Collaboration Hub', href: '/collaboration', icon: '🤝' },
 ]
 export default function Sidebar() {
