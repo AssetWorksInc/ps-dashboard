@@ -31,11 +31,11 @@ export default function Sidebar() {
         alignItems: 'flex-start'
       }}>
         <div>
-          <div style={{
+                  <div style={{
             fontSize: '9px',
             letterSpacing: '2px',
             textTransform: 'uppercase',
-            color: '#A50021',
+            color: '#ffffff',
             fontWeight: 700,
             marginBottom: '3px',
             fontFamily: 'Oswald, sans-serif'
