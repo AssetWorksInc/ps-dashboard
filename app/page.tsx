@@ -233,10 +233,10 @@ export default function Dashboard() {
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Top bar */}
-      <div style={{
-        background: '#ffffff', borderBottom: '4px solid #A50021', padding: '14px 28px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
-      }}>
+    <div style={{
+  background: '#ffffff', borderBottom: '4px solid #A50021', padding: '14px 150px 14px 28px',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
+}}>
         <div>
           <div style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '16px', color: C.dark }}>
             {project.name}
