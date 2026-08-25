@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 
 const EDITABLE_FIELDS = [
   'title', 'body', 'risks_decisions', 'meeting_date', 'attendees', 'action_items', 'project_id',
-  'customer_satisfaction', 'scope_status', 'budget_quality_status', 'on_time_status', 'monitor_control',
+  'customer_satisfaction', 'scope_status', 'budget_quality_status', 'on_time_status', 'monitor_control', 'notes',
 ]
 
 async function assertOwnership(id: string, tenantId: string) {
