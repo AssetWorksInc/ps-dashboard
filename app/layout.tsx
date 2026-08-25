@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 import ChatWidget from '@/components/ChatWidget'
+import LogoutButton from '@/components/LogoutButton'
 
 export const metadata: Metadata = {
   title: 'PS Portal | AssetWorks Professional Services',
@@ -23,6 +24,9 @@ export default function RootLayout({
             overflowY: 'auto',
             background: '#F4F5F6'
           }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '14px 24px 0' }}>
+              <LogoutButton />
+            </div>
             {children}
           </main>
         </div>
