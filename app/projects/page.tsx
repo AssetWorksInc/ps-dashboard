@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import NotesEditor from '@/components/NotesEditor'
 export default function ProjectCenter() {
   const [data, setData] = useState<any>(null)
@@ -10,7 +11,8 @@ export default function ProjectCenter() {
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const [showNewProject, setShowNewProject] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
+  const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '', customerName: '' })
+  const [tenants, setTenants] = useState<any[]>([])
   // Budget tab state
   const [budgetSaving, setBudgetSaving] = useState(false)
   const [editingBudgetSettings, setEditingBudgetSettings] = useState(false)
@@ -75,15 +77,20 @@ export default function ProjectCenter() {
       })
       .catch(() => setLoading(false))
   }, [])
+  useEffect(() => {
+    if (!data?.isAdmin) return
+    fetch('/api/tenants').then(r => r.json()).then(d => setTenants(d.tenants || [])).catch(() => {})
+  }, [data?.isAdmin])
   const isAdmin = !!data?.isAdmin
   async function createProject() {
     if (!newProject.name.trim()) return
     setCreating(true)
     try {
+      const { customerName, ...rest } = newProject
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newProject),
+        body: JSON.stringify({ ...rest, new_tenant_name: customerName || undefined }),
       })
       const result = await res.json()
       if (result.success) {
@@ -91,7 +98,7 @@ export default function ProjectCenter() {
         const created = d.projects?.find((p: any) => p.id === result.project.id)
         setSelectedProject(created || result.project)
         setShowNewProject(false)
-        setNewProject({ name: '', description: '', pm_name: '', start_date: '', end_date: '' })
+        setNewProject({ name: '', description: '', pm_name: '', start_date: '', end_date: '', customerName: '' })
       }
     } finally {
       setCreating(false)
@@ -163,6 +170,7 @@ export default function ProjectCenter() {
     { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'meetingNotes', label: 'Status Meeting Notes' },
+    { id: 'netsuite', label: 'NetSuite Report' },
   ]
   const handleSave = async (health: string, status: string) => {
     setSaving(true)
@@ -652,16 +660,34 @@ export default function ProjectCenter() {
                 Active Engagements
               </p>
               {isAdmin && (
-                <button
-                  onClick={() => setShowNewProject(!showNewProject)}
-                  style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif' }}
-                >
-                  + New
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <Link
+                    href="/projects/netsuite-import"
+                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif', textDecoration: 'none', display: 'inline-block' }}
+                  >
+                    Import NetSuite
+                  </Link>
+                  <button
+                    onClick={() => setShowNewProject(!showNewProject)}
+                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    + New
+                  </button>
+                </div>
               )}
             </div>
             {showNewProject && (
               <div style={{ padding: '14px 16px', borderBottom: '1px solid #EAECEE', background: '#F4F5F6', display: 'grid', gap: '8px' }}>
+                <datalist id="tenant-options-main">
+                  {tenants.map((t: any) => <option key={t.id} value={t.name} />)}
+                </datalist>
+                <input
+                  list="tenant-options-main"
+                  placeholder="Customer name*"
+                  value={newProject.customerName}
+                  onChange={e => setNewProject({ ...newProject, customerName: e.target.value })}
+                  style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                />
                 <input
                   placeholder="Project name*"
                   value={newProject.name}
@@ -698,7 +724,7 @@ export default function ProjectCenter() {
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     onClick={createProject}
-                    disabled={creating || !newProject.name.trim()}
+                    disabled={creating || !newProject.name.trim() || !newProject.customerName.trim()}
                     style={{ flex: 1, padding: '7px', background: creating ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: creating ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
                   >
                     {creating ? 'Creating...' : 'Create Project'}
@@ -754,6 +780,11 @@ export default function ProjectCenter() {
                     {p.health === 'green' ? 'On Track' : p.health === 'amber' ? 'At Risk' : 'Critical'}
                   </span>
                 </div>
+                                {p.tenant_name && (
+                  <p style={{ fontSize: '9.5px', color: '#A50021', fontWeight: 600, marginBottom: '3px', fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                    {p.tenant_name}
+                  </p>
+                )}
                 <p style={{ fontSize: '10px', color: '#8a9199', marginBottom: '6px' }}>PM: {p.pm_name}</p>
                 <div style={{ height: '5px', background: '#EAECEE', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${p.pct_complete}%`, background: '#A50021', borderRadius: '3px' }} />
@@ -2177,7 +2208,212 @@ export default function ProjectCenter() {
                           </>
                         )}
                       </div>
-                    ))}
+                      ))}
+                  </div>
+                )}
+                {activeTab === 'netsuite' && (
+                  <div>
+                    {(() => {
+                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                      if (rows.length === 0) {
+                        return (
+                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
+                            No NetSuite data imported for this project yet.
+                          </p>
+                        )
+                      }
+                      const first = rows[0]
+                      const tiles = [
+                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
+                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
+                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
+                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
+                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
+                      ]
+                      return (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                            {tiles.map(t => (
+                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
+                                </p>
+                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
+                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
+                          </p>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr>
+                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
+                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((r: any) => (
+                                  <tr key={r.id}>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
+                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
+                                    </td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
+                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}            ))}
+                  </div>
+                )}
+                {activeTab === 'netsuite' && (
+                  <div>
+                    {(() => {
+                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                      if (rows.length === 0) {
+                        return (
+                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
+                            No NetSuite data imported for this project yet.
+                          </p>
+                        )
+                      }
+                      const first = rows[0]
+                      const tiles = [
+                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
+                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
+                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
+                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
+                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
+                      ]
+                      return (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                            {tiles.map(t => (
+                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
+                                </p>
+                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
+                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
+                          </p>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr>
+                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
+                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((r: any) => (
+                                  <tr key={r.id}>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
+                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
+                                    </td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
+                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
+                                    </td>
+                                  </tr>
+                                       ))}
+                  </div>
+                )}
+                {activeTab === 'netsuite' && (
+                  <div>
+                    {(() => {
+                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                      if (rows.length === 0) {
+                        return (
+                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
+                            No NetSuite data imported for this project yet.
+                          </p>
+                        )
+                      }
+                      const first = rows[0]
+                      const tiles = [
+                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
+                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
+                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
+                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
+                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
+                      ]
+                      return (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                            {tiles.map(t => (
+                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
+                                </p>
+                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
+                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
+                          </p>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr>
+                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
+                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((r: any) => (
+                                  <tr key={r.id}>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
+                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
+                                    </td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
+                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
+                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
