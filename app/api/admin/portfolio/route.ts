@@ -14,6 +14,21 @@ const EDITABLE_FIELDS = [
 
 const VALID_STATUSES = ['GREEN', 'YELLOW', 'RED', 'BLUE', 'GREY', 'OPEN']
 
+// Postgres `date` columns come back from pg as JS Date objects (local midnight),
+// and NextResponse.json() then serializes them to a full ISO timestamp. Reduce
+// to a plain YYYY-MM-DD string here so downstream date math (shortDate/daysAgo
+// on the client, signalFor's daysSince on the server) gets what it expects.
+function dateOnly(d: unknown): string | null {
+  if (d === null || d === undefined) return null
+  if (d instanceof Date) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  return String(d).slice(0, 10)
+}
+
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -40,11 +55,14 @@ export async function GET() {
   const rows = result.rows.map((r) => {
     const pctComplete = r.pct_complete !== null ? Number(r.pct_complete) : null
     const backlog = r.services_backlog !== null ? Number(r.services_backlog) : null
+    const contractSignedDate = dateOnly(r.contract_signed_date)
+    const lastTimeEntryDate = dateOnly(r.last_time_entry_date)
+    const nextMilestoneDate = dateOnly(r.next_milestone_date)
     const signal = signalFor(
       {
         pctComplete,
-        contractSignedDate: r.contract_signed_date,
-        lastTimeEntryDate: r.last_time_entry_date,
+        contractSignedDate,
+        lastTimeEntryDate,
         servicesBacklog: backlog,
         epic: r.epic,
       },
@@ -61,12 +79,12 @@ export async function GET() {
       confluenceUrl: r.confluence_url,
       pmComment: r.pm_comment,
       nextMilestone: r.next_milestone,
-      nextMilestoneDate: r.next_milestone_date,
+      nextMilestoneDate,
       primeResource: r.prime_resource,
       secondaryPrimeResource: r.secondary_prime_resource,
       pctComplete,
-      contractSignedDate: r.contract_signed_date,
-      lastTimeEntryDate: r.last_time_entry_date,
+      contractSignedDate,
+      lastTimeEntryDate,
       servicesBacklog: backlog,
       servicesRevenue: r.services_revenue !== null ? Number(r.services_revenue) : null,
       openairUrl: r.pid ? `https://app.openair.com/projects/${r.pid}` : null,
