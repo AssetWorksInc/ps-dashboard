@@ -8,7 +8,7 @@ const nav = [
   { label: 'Resource Center', href: '/resources', icon: '📚' },
   { label: 'Collaboration Hub', href: '/collaboration', icon: '🤝' },
 ]
-export default function Sidebar() {
+export default function Sidebar({ userRole }: { userRole?: string }) {
   const pathname = usePathname()
   return (
     <aside style={{
@@ -59,6 +59,52 @@ export default function Sidebar() {
       </div>
       {/* Nav */}
       <nav style={{ flex: 1, padding: '8px 0' }}>
+        {userRole === 'admin' && (
+          <>
+            <div style={{
+              padding: '14px 18px 6px',
+              fontSize: '9px',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              color: '#697077',
+              fontWeight: 700,
+              fontFamily: 'Oswald, sans-serif'
+            }}>
+              Management Center
+            </div>
+            <Link
+              href="/management/portfolio"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '11px 18px',
+                fontSize: '12px',
+                fontWeight: pathname === '/management/portfolio' ? 600 : 400,
+                color: pathname === '/management/portfolio' ? '#ffffff' : '#8a9199',
+                background: pathname === '/management/portfolio' ? 'rgba(165,0,33,0.2)' : 'transparent',
+                borderLeft: pathname === '/management/portfolio' ? '3px solid #A50021' : '3px solid transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                fontFamily: 'Roboto, sans-serif'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>🧭</span>
+              <span>Portfolio</span>
+            </Link>
+            <div style={{
+              padding: '14px 18px 6px',
+              fontSize: '9px',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              color: '#697077',
+              fontWeight: 700,
+              fontFamily: 'Oswald, sans-serif'
+            }}>
+              Professional Services
+            </div>
+          </>
+        )}
         {nav.map(item => {
           const active = pathname === item.href
           return (
