@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function Login() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -28,7 +26,9 @@ export default function Login() {
       const data = await res.json()
 
       if (data.success) {
-        router.push('/')
+        // Full page reload (not router.push) so the server-rendered
+        // layout re-reads the auth cookie and picks up the correct role.
+        window.location.href = '/'
       } else {
         setError('Invalid email or password. Please try again.')
         setLoading(false)
