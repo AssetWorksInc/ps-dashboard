@@ -73,6 +73,26 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
               Management Center
             </div>
             <Link
+              href="/management"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '11px 18px',
+                fontSize: '12px',
+                fontWeight: pathname === '/management' ? 600 : 400,
+                color: pathname === '/management' ? '#ffffff' : '#8a9199',
+                background: pathname === '/management' ? 'rgba(165,0,33,0.2)' : 'transparent',
+                borderLeft: pathname === '/management' ? '3px solid #A50021' : '3px solid transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                fontFamily: 'Roboto, sans-serif'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>🗂️</span>
+              <span>Dashboard</span>
+            </Link>
+            <Link
               href="/management/portfolio"
               style={{
                 display: 'flex',
@@ -91,6 +111,26 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
             >
               <span style={{ fontSize: '16px' }}>🧭</span>
               <span>Portfolio</span>
+            </Link>
+            <Link
+              href="/management/tickets"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '11px 18px',
+                fontSize: '12px',
+                fontWeight: pathname === '/management/tickets' ? 600 : 400,
+                color: pathname === '/management/tickets' ? '#ffffff' : '#8a9199',
+                background: pathname === '/management/tickets' ? 'rgba(165,0,33,0.2)' : 'transparent',
+                borderLeft: pathname === '/management/tickets' ? '3px solid #A50021' : '3px solid transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                fontFamily: 'Roboto, sans-serif'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>🎫</span>
+              <span>Tickets</span>
             </Link>
             <div style={{
               padding: '14px 18px 6px',
