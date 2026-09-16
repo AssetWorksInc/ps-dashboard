@@ -30,7 +30,7 @@ export async function GET() {
       params
     )
     const deliverables = await pool.query(
-      `SELECT id, project_id, category, name, status, due_date, owner
+      `SELECT id, project_id, category, name, status, due_date, owner, created_at
        FROM deliverables
        ${scope}
        ORDER BY created_at ASC`,
@@ -44,7 +44,7 @@ export async function GET() {
       params
     )
     const contacts = await pool.query(
-      `SELECT id, project_id, name, role, email, phone, is_primary
+      `SELECT id, project_id, name, role, email, phone, is_primary, created_at
        FROM project_contacts
        ${scope}
        ORDER BY is_primary DESC, created_at ASC`,
@@ -58,21 +58,21 @@ export async function GET() {
       params
     )
     const budgetLineItems = await pool.query(
-      `SELECT id, project_id, activity_name, hours_planned, hours_worked, sort_order
+      `SELECT id, project_id, activity_name, hours_planned, hours_worked, sort_order, created_at
        FROM budget_line_items
        ${scope}
        ORDER BY project_id, sort_order ASC, created_at ASC`,
       params
     )
     const billingCharges = await pool.query(
-      `SELECT id, project_id, description, hours, rate, amount, charge_date, source
+      `SELECT id, project_id, description, hours, rate, amount, charge_date, source, created_at
        FROM billing_charges
        ${scope}
        ORDER BY project_id, charge_date DESC NULLS LAST, created_at DESC`,
       params
     )
     const sopItems = await pool.query(
-      `SELECT id, project_id, title, description, status, due_date, sort_order, checked_by, checked_at
+      `SELECT id, project_id, title, description, status, due_date, sort_order, checked_by, checked_at, created_at
        FROM sop_items
        ${scope}
        ORDER BY project_id, sort_order ASC, created_at ASC`,
