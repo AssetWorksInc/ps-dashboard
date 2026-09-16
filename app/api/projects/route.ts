@@ -20,7 +20,9 @@ export async function GET() {
     const projects = await pool.query(
       `SELECT p.id, p.tenant_id, t.name AS tenant_name, p.name, p.description, p.health, p.pct_complete, p.pm_name,
               p.start_date, p.end_date, p.status, p.go_live_date, p.go_live_label,
-              p.budget_hours_total, p.budget_hours_used, p.hourly_rate, p.budget_status
+              p.budget_hours_total, p.budget_hours_used, p.hourly_rate, p.budget_status,
+              p.engagement_status, p.epic, p.confluence_url, p.pm_comment,
+              p.next_milestone, p.next_milestone_date
        FROM projects p
        JOIN tenants t ON t.id = p.tenant_id
        ${scopeP}
