@@ -217,7 +217,7 @@ export default function ProjectCenter() {
     { id: 'timeline', label: 'Timeline' },
     { id: 'deliverables', label: 'Deliverables' },
     { id: 'budget', label: 'Budget' },
-    { id: 'sop', label: 'SOP Checklist' },
+    { id: 'documents', label: 'Documents' },
     { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'meetingNotes', label: 'Status Meeting Notes' },
@@ -2018,9 +2018,12 @@ export default function ProjectCenter() {
                     </div>
                   </div>
                 )}
-                {/* SOP CHECKLIST */}
-                {activeTab === 'sop' && (
+                {/* DOCUMENTS (folded in: SOP Checklist + Reference Documents) */}
+                {activeTab === 'documents' && (
                   <div>
+                    <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '10px' }}>
+                      SOP Checklist
+                    </h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontSize: '10px', color: '#8a9199', fontWeight: 600 }}>
                         Checklist Progress — {sopCompleteCount} of {sopItems.length} complete ({sopPct}%)
