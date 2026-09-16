@@ -220,7 +220,7 @@ export default function ProjectCenter() {
     { id: 'documents', label: 'Documents' },
     { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
-    { id: 'meetingNotes', label: 'Status Meeting Notes' },
+    { id: 'notes', label: 'Notes' },
   ]
   const handleSave = async (health: string, status: string, startDate?: string, endDate?: string) => {
     setSaving(true)
@@ -2558,8 +2558,8 @@ export default function ProjectCenter() {
                     ))}
                   </div>
                 )}
-                {/* STATUS MEETING NOTES */}
-                {activeTab === 'meetingNotes' && (
+                {/* NOTES (renamed from Status Meeting Notes) */}
+                {activeTab === 'notes' && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
                       {isAdmin && !addingMeetingNote && (
