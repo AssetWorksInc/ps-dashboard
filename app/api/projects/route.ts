@@ -36,6 +36,13 @@ export async function GET() {
        ORDER BY created_at ASC`,
       params
     )
+    const projectTasks = await pool.query(
+      `SELECT id, project_id, title, description, status, assignee, due_date, created_at
+       FROM project_tasks
+       ${scope}
+       ORDER BY created_at ASC`,
+      params
+    )
     const contacts = await pool.query(
       `SELECT id, project_id, name, role, email, phone, is_primary
        FROM project_contacts
@@ -109,6 +116,7 @@ export async function GET() {
       isAdmin,
       projects: projects.rows,
       deliverables: deliverables.rows,
+      projectTasks: projectTasks.rows,
       contacts: contacts.rows,
       appointments: appointments.rows,
       budgetLineItems: budgetLineItems.rows,

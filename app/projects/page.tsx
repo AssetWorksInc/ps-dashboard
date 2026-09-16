@@ -87,6 +87,9 @@ export default function ProjectCenter() {
   const [newDeliverable, setNewDeliverable] = useState({ name: '', category: '', owner: '', due_date: '', status: 'upcoming' })
   const [editingDeliverableId, setEditingDeliverableId] = useState<string | null>(null)
   const [deliverableDraft, setDeliverableDraft] = useState<any>({})
+  // Tasks tab state
+  const [addingTask, setAddingTask] = useState(false)
+  const [newTask, setNewTask] = useState({ title: '', assignee: '', due_date: '', status: 'todo' })
   // Customer Contacts tab state
   const [addingContact, setAddingContact] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', role: '', email: '', phone: '', is_primary: false })
@@ -185,6 +188,7 @@ export default function ProjectCenter() {
   const sopBg = (s: string) => s === 'complete' ? '#E7F3E8' : s === 'in-progress' ? '#FBE7EA' : '#FDF3DC'
   const sopLabel = (s: string) => s === 'complete' ? 'Complete' : s === 'in-progress' ? 'In Progress' : 'Not Started'
   const deliverables = data?.deliverables?.filter((d: any) => d.project_id === selectedProject?.id) || []
+  const tasks = data?.projectTasks?.filter((t: any) => t.project_id === selectedProject?.id) || []
   const contacts = data?.contacts?.filter((c: any) => c.project_id === selectedProject?.id) || []
   const appointments = data?.appointments?.filter((a: any) => a.project_id === selectedProject?.id) || []
   const lineItems = data?.budgetLineItems?.filter((li: any) => li.project_id === selectedProject?.id) || []
@@ -209,6 +213,7 @@ export default function ProjectCenter() {
   const pctUsed = hoursTotal > 0 ? Math.min(Math.round((hoursUsed / hoursTotal) * 100), 100) : 0
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'tasks', label: 'Tasks' },
     { id: 'deliverables', label: 'Deliverables' },
     { id: 'budget', label: 'Budget' },
     { id: 'sop', label: 'SOP Checklist' },
@@ -525,6 +530,41 @@ export default function ProjectCenter() {
   async function deleteDeliverable(id: string) {
     if (!confirm('Delete this deliverable?')) return
     const res = await fetch(`/api/deliverables/${id}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+  async function createTask() {
+    if (!newTask.title.trim()) return
+    const res = await fetch('/api/project-tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: selectedProject.id,
+        title: newTask.title,
+        assignee: newTask.assignee || null,
+        due_date: newTask.due_date || null,
+        status: newTask.status || 'todo',
+      }),
+    })
+    const result = await res.json()
+    if (result.success) {
+      await loadProjects()
+      setAddingTask(false)
+      setNewTask({ title: '', assignee: '', due_date: '', status: 'todo' })
+    }
+  }
+  async function updateTaskStatus(id: string, status: string) {
+    const res = await fetch(`/api/project-tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    const result = await res.json()
+    if (result.success) await loadProjects()
+  }
+  async function deleteTask(id: string) {
+    if (!confirm('Delete this task?')) return
+    const res = await fetch(`/api/project-tasks/${id}`, { method: 'DELETE' })
     const result = await res.json()
     if (result.success) await loadProjects()
   }
@@ -1169,6 +1209,133 @@ export default function ProjectCenter() {
                       >
                         {saving ? 'Saving...' : 'Save Changes'}
                       </button>
+                    </div>
+                  </div>
+                )}
+                {/* TASKS */}
+                {activeTab === 'tasks' && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      {isAdmin && !addingTask && (
+                        <button
+                          onClick={() => setAddingTask(true)}
+                          style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          + Add Task
+                        </button>
+                      )}
+                    </div>
+                    {addingTask && (
+                      <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '14px', display: 'grid', gap: '8px' }}>
+                        <input
+                          placeholder="Task title*"
+                          value={newTask.title}
+                          onChange={e => setNewTask({ ...newTask, title: e.target.value })}
+                          style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          autoFocus
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                          <input
+                            placeholder="Assignee"
+                            value={newTask.assignee}
+                            onChange={e => setNewTask({ ...newTask, assignee: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            type="date"
+                            value={newTask.due_date}
+                            onChange={e => setNewTask({ ...newTask, due_date: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <select
+                            value={newTask.status}
+                            onChange={e => setNewTask({ ...newTask, status: e.target.value })}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          >
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="waiting_on_customer">Waiting on Customer</option>
+                            <option value="done">Done</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={createTask}
+                            disabled={!newTask.title.trim()}
+                            style={{ padding: '7px 14px', background: !newTask.title.trim() ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: !newTask.title.trim() ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setAddingTask(false); setNewTask({ title: '', assignee: '', due_date: '', status: 'todo' }) }}
+                            style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                      {[
+                        { id: 'todo', label: 'To Do', accent: '#00538C' },
+                        { id: 'in_progress', label: 'In Progress', accent: '#A50021' },
+                        { id: 'waiting_on_customer', label: 'Waiting on Customer', accent: '#8a6400' },
+                        { id: 'done', label: 'Done', accent: '#2E7D32' },
+                      ].map(col => {
+                        const colTasks = tasks.filter((t: any) => t.status === col.id)
+                        return (
+                          <div key={col.id} style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '8px', padding: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '.4px', color: col.accent }}>
+                                {col.label}
+                              </span>
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#8a9199' }}>{colTasks.length}</span>
+                            </div>
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                              {colTasks.length === 0 && (
+                                <p style={{ fontSize: '11px', color: '#aab0b5', textAlign: 'center', padding: '10px 0' }}>No tasks</p>
+                              )}
+                              {colTasks.map((t: any) => {
+                                const overdue = t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date(new Date().toDateString())
+                                return (
+                                  <div key={t.id} style={{ background: '#fff', border: '1px solid #CCCCCC', borderTop: `3px solid ${col.accent}`, borderRadius: '6px', padding: '9px 10px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#323E48', margin: '0 0 6px' }}>{t.title}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: '4px' }}>
+                                      <span style={{ fontSize: '10.5px', color: '#697077' }}>{t.assignee || '—'}</span>
+                                      {t.due_date && (
+                                        <span style={{ fontSize: '10px', fontWeight: 600, color: overdue ? '#A50021' : '#8a9199' }}>
+                                          {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {isAdmin && (
+                                      <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                        <select
+                                          value={t.status}
+                                          onChange={e => updateTaskStatus(t.id, e.target.value)}
+                                          style={{ flex: 1, fontSize: '10.5px', padding: '4px 6px', border: '1px solid #CCCCCC', borderRadius: '4px' }}
+                                        >
+                                          <option value="todo">To Do</option>
+                                          <option value="in_progress">In Progress</option>
+                                          <option value="waiting_on_customer">Waiting on Customer</option>
+                                          <option value="done">Done</option>
+                                        </select>
+                                        <button
+                                          onClick={() => deleteTask(t.id)}
+                                          title="Delete task"
+                                          style={{ padding: '4px 8px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '10.5px', cursor: 'pointer' }}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
