@@ -221,7 +221,6 @@ export default function ProjectCenter() {
     { id: 'contacts', label: 'Customer Contacts' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'meetingNotes', label: 'Status Meeting Notes' },
-    { id: 'netsuite', label: 'NetSuite Report' },
   ]
   const handleSave = async (health: string, status: string, startDate?: string, endDate?: string) => {
     setSaving(true)
@@ -1891,6 +1890,132 @@ export default function ProjectCenter() {
                         ))}
                       </tbody>
                     </table>
+                    {/* NetSuite Data (folded in from the old standalone NetSuite Report tab) */}
+                    <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #EAECEE' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                          NetSuite Data
+                        </h3>
+                        {isAdmin && (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <Link
+                              href="/projects/netsuite-import"
+                              style={{ display: 'inline-block', padding: '6px 14px', background: '#A50021', color: '#fff', borderRadius: '5px', fontSize: '11.5px', fontWeight: 700, textDecoration: 'none', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              Import NetSuite Report
+                            </Link>
+                            <button
+                              onClick={async () => {
+                                const ok = window.confirm(`Clear NetSuite data for "${selectedProject.name}"? This removes its imported task rows and resets this project's NetSuite-synced hours. This cannot be undone.`)
+                                if (!ok) return
+                                try {
+                                  const res = await fetch(`/api/projects/${selectedProject.id}/netsuite-data`, { method: 'DELETE' })
+                                  const resData = await res.json()
+                                  if (!res.ok) { alert(resData.error || 'Could not clear NetSuite data.'); return }
+                                  window.location.reload()
+                                } catch (err) {
+                                  alert(String(err))
+                                }
+                              }}
+                              style={{ background: 'none', border: '1px solid #f0c3b8', color: '#8E1537', borderRadius: '4px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: '6px 14px', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              Clear NetSuite Data
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {(() => {
+                        const dashboardRows = (data?.netsuiteDashboardRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                        const dfirst = dashboardRows[0]
+                        if (!dfirst) return null
+                        const dashboardTiles = [
+                          { label: 'Prime Resource', value: dfirst.prime_resource, sub: 'assigned lead' },
+                          { label: '% Complete', value: dfirst.pct_complete != null ? `${Number(dfirst.pct_complete).toFixed(0)}%` : null, sub: 'overall progress' },
+                          { label: 'Contract Signed', value: dfirst.contract_signed_date, sub: 'date' },
+                          { label: 'Last Time Entry', value: dfirst.last_time_entry_date, sub: 'most recent activity' },
+                          { label: 'Services Backlog', value: dfirst.services_backlog != null ? `$${Number(dfirst.services_backlog).toLocaleString()}` : null, sub: 'remaining' },
+                          { label: 'Services Revenue', value: dfirst.services_revenue != null ? `$${Number(dfirst.services_revenue).toLocaleString()}` : null, sub: 'recognized' },
+                        ]
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                            {dashboardTiles.map(t => (
+                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '15px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                  {t.value ?? '—'}
+                                </p>
+                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                      {(() => {
+                        const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                        const hasDashboardData = (data?.netsuiteDashboardRows || []).some((r: any) => r.project_id === selectedProject.id)
+                        if (rows.length === 0 && !hasDashboardData) {
+                          return (
+                            <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
+                              No NetSuite data imported for this project yet.
+                            </p>
+                          )
+                        }
+                        if (rows.length === 0) return null
+                        const first = rows[0]
+                        const tiles = [
+                          { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
+                          { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
+                          { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
+                          { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
+                          { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
+                        ]
+                        return (
+                          <>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                              {tiles.map(t => (
+                                <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                                  <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                                  <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                    {t.value != null ? Number(t.value).toFixed(2) : '—'}
+                                  </p>
+                                  <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
+                              Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
+                            </p>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                <thead>
+                                  <tr>
+                                    {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
+                                      <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rows.map((r: any) => (
+                                    <tr key={r.id}>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
+                                        {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
+                                      </td>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
+                                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
+                                        {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
                   </div>
                 )}
                 {/* SOP CHECKLIST */}
@@ -2696,128 +2821,6 @@ export default function ProjectCenter() {
                         )}
                       </div>
                       ))}
-                  </div>
-                )}
-                {activeTab === 'netsuite' && (
-                  <div>
-                    {isAdmin && (
-                      <div style={{ marginBottom: '14px', display: 'flex', gap: '8px' }}>
-                        <Link
-                          href="/projects/netsuite-import"
-                          style={{ display: 'inline-block', padding: '6px 14px', background: '#A50021', color: '#fff', borderRadius: '5px', fontSize: '11.5px', fontWeight: 700, textDecoration: 'none', fontFamily: 'Oswald, sans-serif' }}
-                        >
-                          Import NetSuite Report
-                        </Link>
-                        <button
-                          onClick={async () => {
-                            const ok = window.confirm(`Clear NetSuite data for "${selectedProject.name}"? This removes its imported task rows and resets the Budget tab's NetSuite-synced hours. This cannot be undone.`)
-                            if (!ok) return
-                            try {
-                              const res = await fetch(`/api/projects/${selectedProject.id}/netsuite-data`, { method: 'DELETE' })
-                              const resData = await res.json()
-                              if (!res.ok) { alert(resData.error || 'Could not clear NetSuite data.'); return }
-                              window.location.reload()
-                            } catch (err) {
-                              alert(String(err))
-                            }
-                          }}
-                          style={{ background: 'none', border: '1px solid #f0c3b8', color: '#8E1537', borderRadius: '4px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: '6px 14px', fontFamily: 'Oswald, sans-serif' }}
-                        >
-                          Clear NetSuite Data
-                        </button>
-                      </div>
-                    )}
-                    {(() => {
-                      const dashboardRows = (data?.netsuiteDashboardRows || []).filter((r: any) => r.project_id === selectedProject.id)
-                      const dfirst = dashboardRows[0]
-                      if (!dfirst) return null
-                      const dashboardTiles = [
-                        { label: 'Prime Resource', value: dfirst.prime_resource, sub: 'assigned lead' },
-                        { label: '% Complete', value: dfirst.pct_complete != null ? `${Number(dfirst.pct_complete).toFixed(0)}%` : null, sub: 'overall progress' },
-                        { label: 'Contract Signed', value: dfirst.contract_signed_date, sub: 'date' },
-                        { label: 'Last Time Entry', value: dfirst.last_time_entry_date, sub: 'most recent activity' },
-                        { label: 'Services Backlog', value: dfirst.services_backlog != null ? `$${Number(dfirst.services_backlog).toLocaleString()}` : null, sub: 'remaining' },
-                        { label: 'Services Revenue', value: dfirst.services_revenue != null ? `$${Number(dfirst.services_revenue).toLocaleString()}` : null, sub: 'recognized' },
-                      ]
-                      return (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                          {dashboardTiles.map(t => (
-                            <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
-                              <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
-                              <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '15px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
-                                {t.value ?? '—'}
-                              </p>
-                              <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })()}
-                    {(() => {
-                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
-                      const hasDashboardData = (data?.netsuiteDashboardRows || []).some((r: any) => r.project_id === selectedProject.id)
-                      if (rows.length === 0 && !hasDashboardData) {
-                        return (
-                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
-                            No NetSuite data imported for this project yet.
-                          </p>
-                        )
-                      }
-                      if (rows.length === 0) return null
-                      const first = rows[0]
-                      const tiles = [
-                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
-                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
-                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
-                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
-                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
-                      ]
-                      return (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                            {tiles.map(t => (
-                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
-                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
-                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
-                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
-                                </p>
-                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
-                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
-                          </p>
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                              <thead>
-                                <tr>
-                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
-                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rows.map((r: any) => (
-                                  <tr key={r.id}>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
-                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
-                                    </td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
-                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
-                      )
-                    })()}
                   </div>
                 )}
               </div>
