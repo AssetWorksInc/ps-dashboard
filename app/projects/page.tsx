@@ -1363,7 +1363,16 @@ export default function ProjectCenter() {
                               <div style={{ position: 'relative', height: '54px', background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '8px' }}>
                                 {todayPct !== null && (
                                   <div style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: '2px', background: '#A50021', zIndex: 2 }} title="Today">
-                                    <span style={{ position: 'absolute', top: '-16px', left: '-14px', fontSize: '9px', fontWeight: 700, color: '#A50021', fontFamily: 'Oswald, sans-serif' }}>Today</span>
+                                    <span style={{
+                                      position: 'absolute',
+                                      top: '4px',
+                                      left: todayPct < 8 ? '4px' : todayPct > 92 ? 'auto' : '50%',
+                                      right: todayPct > 92 ? '4px' : 'auto',
+                                      transform: todayPct < 8 || todayPct > 92 ? 'none' : 'translateX(-50%)',
+                                      fontSize: '9px', fontWeight: 700, color: '#fff', background: '#A50021',
+                                      padding: '1px 6px', borderRadius: '3px', whiteSpace: 'nowrap' as const,
+                                      fontFamily: 'Oswald, sans-serif', zIndex: 3,
+                                    }}>Today</span>
                                   </div>
                                 )}
                                 {dated.map((d: any) => {
