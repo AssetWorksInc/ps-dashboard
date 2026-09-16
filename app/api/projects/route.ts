@@ -94,6 +94,15 @@ export async function GET() {
        ORDER BY nr.project_id, nr.created_at ASC`,
       params
     )
+    const netsuiteDashboardRows = await pool.query(
+      `SELECT ndr.id, ndr.project_id, ndr.netsuite_project_label, ndr.prime_resource, ndr.secondary_prime_resource,
+              ndr.internal_id, ndr.client_name, ndr.pct_complete, ndr.contract_signed_date, ndr.last_time_entry_date,
+              ndr.services_backlog, ndr.services_revenue
+       FROM netsuite_dashboard_rows ndr
+       ${isAdmin ? '' : 'WHERE EXISTS (SELECT 1 FROM projects pp WHERE pp.id = ndr.project_id AND pp.tenant_id = $1)'}
+       ORDER BY ndr.project_id, ndr.created_at ASC`,
+      params
+    )
     return NextResponse.json({
       isAdmin,
       projects: projects.rows,
@@ -106,6 +115,7 @@ export async function GET() {
       documents: documents.rows,
       meetingNotes: meetingNotes.rows,
       netsuiteTaskRows: netsuiteTaskRows.rows,
+      netsuiteDashboardRows: netsuiteDashboardRows.rows,
     })
   } catch (error) {
     return NextResponse.json(

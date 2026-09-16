@@ -10,6 +10,47 @@ export default function ProjectCenter() {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const [showNewProject, setShowNewProject] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  function toggleProjectSelect(id: string) {
+    setSelectedProjectIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function toggleSelectAllProjects() {
+    if (!data?.projects) return
+    if (selectedProjectIds.size === data.projects.length) {
+      setSelectedProjectIds(new Set())
+    } else {
+      setSelectedProjectIds(new Set(data.projects.map((p: any) => p.id)))
+    }
+  }
+  async function deleteSelectedProjects() {
+    if (selectedProjectIds.size === 0) return
+    const ok = window.confirm(`Delete ${selectedProjectIds.size} project(s)? This permanently removes each project and all its deliverables, budget items, contacts, documents, and NetSuite data. This cannot be undone.`)
+    if (!ok) return
+    setBulkDeleting(true)
+    let deletedCount = 0
+    let failedCount = 0
+    for (const id of Array.from(selectedProjectIds)) {
+      try {
+        const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+        if (res.ok) deletedCount++
+        else failedCount++
+      } catch {
+        failedCount++
+      }
+    }
+    setBulkDeleting(false)
+    setSelectedProjectIds(new Set())
+    setSelectMode(false)
+    alert(`Deleted ${deletedCount} project(s).${failedCount > 0 ? ` ${failedCount} failed.` : ''}`)
+    window.location.reload()
+  }
   const [creating, setCreating] = useState(false)
   const [newProject, setNewProject] = useState({ name: '', description: '', pm_name: '', start_date: '', end_date: '', customerName: '' })
   const [tenants, setTenants] = useState<any[]>([])
@@ -172,22 +213,22 @@ export default function ProjectCenter() {
     { id: 'meetingNotes', label: 'Status Meeting Notes' },
     { id: 'netsuite', label: 'NetSuite Report' },
   ]
-  const handleSave = async (health: string, status: string) => {
+  const handleSave = async (health: string, status: string, startDate?: string, endDate?: string) => {
     setSaving(true)
     setSaveMessage(null)
     try {
       const res = await fetch('/api/projects/update', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedProject.id, health, status })
+        body: JSON.stringify({ id: selectedProject.id, health, status, start_date: startDate || null, end_date: endDate || null })
       })
       const result = await res.json()
       if (result.success) {
-        setSelectedProject({ ...selectedProject, health, status })
+        setSelectedProject({ ...selectedProject, health, status, start_date: startDate || selectedProject.start_date, end_date: endDate || selectedProject.end_date })
         setData((prev: any) => ({
           ...prev,
           projects: prev.projects.map((p: any) =>
-            p.id === selectedProject.id ? { ...p, health, status } : p
+            p.id === selectedProject.id ? { ...p, health, status, start_date: startDate || p.start_date, end_date: endDate || p.end_date } : p
           )
         }))
         setSaveMessage({ type: 'success', text: '✅ Project updated successfully.' })
@@ -661,21 +702,46 @@ export default function ProjectCenter() {
               </p>
               {isAdmin && (
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <Link
-                    href="/projects/netsuite-import"
-                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif', textDecoration: 'none', display: 'inline-block' }}
-                  >
-                    Import NetSuite
-                  </Link>
                   <button
                     onClick={() => setShowNewProject(!showNewProject)}
                     style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif' }}
                   >
                     + New
                   </button>
+                  <button
+                    onClick={() => { setSelectMode(!selectMode); setSelectedProjectIds(new Set()) }}
+                    style={{ background: selectMode ? '#fff' : 'none', border: '1px solid rgba(255,255,255,0.4)', color: selectMode ? '#323E48' : '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 8px', fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {selectMode ? 'Cancel' : 'Select'}
+                  </button>
                 </div>
               )}
             </div>
+            {isAdmin && selectMode && (
+              <div style={{ padding: '8px 16px', background: '#F4F5F6', borderBottom: '1px solid #EAECEE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#323E48', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!data?.projects && selectedProjectIds.size === data.projects.length && data.projects.length > 0}
+                    onChange={toggleSelectAllProjects}
+                />
+                  Select all
+                </label>
+                <button
+                  onClick={deleteSelectedProjects}
+                  disabled={selectedProjectIds.size === 0 || bulkDeleting}
+                  style={{
+                    background: selectedProjectIds.size === 0 ? '#EAECEE' : '#8E1537',
+                    color: selectedProjectIds.size === 0 ? '#8a9199' : '#fff',
+                    border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 700,
+                    cursor: selectedProjectIds.size === 0 ? 'default' : 'pointer', padding: '4px 10px',
+                    fontFamily: 'Oswald, sans-serif'
+                  }}
+                >
+                  {bulkDeleting ? 'Deleting…' : `Delete selected (${selectedProjectIds.size})`}
+                </button>
+              </div>
+            )}
             {showNewProject && (
               <div style={{ padding: '14px 16px', borderBottom: '1px solid #EAECEE', background: '#F4F5F6', display: 'grid', gap: '8px' }}>
                 <datalist id="tenant-options-main">
@@ -752,8 +818,17 @@ export default function ProjectCenter() {
               </div>
             )}
             {data?.projects?.map((p: any) => (
+              <div key={p.id} style={{ position: 'relative' }}>
+              {isAdmin && selectMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedProjectIds.has(p.id)}
+                  onChange={() => toggleProjectSelect(p.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ position: 'absolute', top: '14px', left: '12px', zIndex: 1, width: '14px', height: '14px', cursor: 'pointer' }}
+                />
+              )}
               <button
-                key={p.id}
                 onClick={() => { setSelectedProject(p); setActiveTab('status') }}
                 style={{
                   width: '100%',
@@ -761,13 +836,13 @@ export default function ProjectCenter() {
                   border: 'none',
                   borderLeft: `4px solid ${selectedProject?.id === p.id ? '#A50021' : 'transparent'}`,
                   borderBottom: '1px solid #EAECEE',
-                  padding: '14px 16px',
+                  padding: selectMode ? '14px 16px 14px 34px' : '14px 16px',
                   cursor: 'pointer',
                   background: selectedProject?.id === p.id ? '#FBE7EA' : '#ffffff',
                   transition: 'all 0.15s'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', paddingRight: '22px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#323E48', lineHeight: 1.4, paddingRight: '6px' }}>
                     {p.name}
                   </span>
@@ -791,6 +866,32 @@ export default function ProjectCenter() {
                 </div>
                 <p style={{ fontSize: '9px', color: '#8a9199', marginTop: '3px' }}>{p.pct_complete}% complete</p>
               </button>
+              {isAdmin && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const ok = window.confirm(`Delete project "${p.name}"${p.tenant_name ? ` (${p.tenant_name})` : ''}?\n\nThis permanently removes the project and all its deliverables, budget items, contacts, documents, and NetSuite data. This cannot be undone.`)
+                    if (!ok) return
+                    try {
+                      const res = await fetch(`/api/projects/${p.id}`, { method: 'DELETE' })
+                      const resData = await res.json()
+                      if (!res.ok) { alert(resData.error || 'Could not delete this project.'); return }
+                      window.location.reload()
+                    } catch (err) {
+                      alert(String(err))
+                    }
+                  }}
+                  title="Delete project"
+                  style={{
+                    position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px',
+                    border: 'none', background: 'rgba(142,21,55,0.08)', color: '#8E1537', borderRadius: '4px',
+                    fontSize: '13px', fontWeight: 700, cursor: 'pointer', lineHeight: '18px', padding: 0,
+                  }}
+                >
+                  ×
+                </button>
+              )}
+              </div>
             ))}
           </div>
           {/* Right — detail panel */}
@@ -914,6 +1015,32 @@ export default function ProjectCenter() {
                           </select>
                         </div>
                       </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <label style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#8a9199', textTransform: 'uppercase', letterSpacing: '.5px', display: 'block', marginBottom: '5px' }}>
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            id="start-date-input"
+                            defaultValue={selectedProject.start_date ? new Date(selectedProject.start_date).toISOString().slice(0, 10) : ''}
+                            key={selectedProject.id + '-start_date'}
+                            style={{ width: '100%', padding: '9px 12px', fontSize: '12px', border: '1px solid #CCCCCC', borderRadius: '6px', color: '#323E48', background: '#ffffff' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', fontWeight: 700, color: '#8a9199', textTransform: 'uppercase', letterSpacing: '.5px', display: 'block', marginBottom: '5px' }}>
+                            End Date
+                          </label>
+                          <input
+                            type="date"
+                            id="end-date-input"
+                            defaultValue={selectedProject.end_date ? new Date(selectedProject.end_date).toISOString().slice(0, 10) : ''}
+                            key={selectedProject.id + '-end_date'}
+                            style={{ width: '100%', padding: '9px 12px', fontSize: '12px', border: '1px solid #CCCCCC', borderRadius: '6px', color: '#323E48', background: '#ffffff' }}
+                          />
+                        </div>
+                      </div>
                       {saveMessage && (
                         <div style={{
                           padding: '10px 14px', borderRadius: '6px', marginBottom: '10px',
@@ -929,7 +1056,9 @@ export default function ProjectCenter() {
                         onClick={() => {
                           const health = (document.getElementById('health-select') as HTMLSelectElement)?.value
                           const status = (document.getElementById('status-select') as HTMLSelectElement)?.value
-                          handleSave(health, status)
+                          const startDate = (document.getElementById('start-date-input') as HTMLInputElement)?.value
+                          const endDate = (document.getElementById('end-date-input') as HTMLInputElement)?.value
+                          handleSave(health, status, startDate, endDate)
                         }}
                         disabled={saving}
                         style={{
@@ -2213,153 +2342,70 @@ export default function ProjectCenter() {
                 )}
                 {activeTab === 'netsuite' && (
                   <div>
+                    {isAdmin && (
+                      <div style={{ marginBottom: '14px', display: 'flex', gap: '8px' }}>
+                        <Link
+                          href="/projects/netsuite-import"
+                          style={{ display: 'inline-block', padding: '6px 14px', background: '#A50021', color: '#fff', borderRadius: '5px', fontSize: '11.5px', fontWeight: 700, textDecoration: 'none', fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          Import NetSuite Report
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            const ok = window.confirm(`Clear NetSuite data for "${selectedProject.name}"? This removes its imported task rows and resets the Budget tab's NetSuite-synced hours. This cannot be undone.`)
+                            if (!ok) return
+                            try {
+                              const res = await fetch(`/api/projects/${selectedProject.id}/netsuite-data`, { method: 'DELETE' })
+                              const resData = await res.json()
+                              if (!res.ok) { alert(resData.error || 'Could not clear NetSuite data.'); return }
+                              window.location.reload()
+                            } catch (err) {
+                              alert(String(err))
+                            }
+                          }}
+                          style={{ background: 'none', border: '1px solid #f0c3b8', color: '#8E1537', borderRadius: '4px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: '6px 14px', fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          Clear NetSuite Data
+                        </button>
+                      </div>
+                    )}
                     {(() => {
-                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
-                      if (rows.length === 0) {
-                        return (
-                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
-                            No NetSuite data imported for this project yet.
-                          </p>
-                        )
-                      }
-                      const first = rows[0]
-                      const tiles = [
-                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
-                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
-                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
-                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
-                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
+                      const dashboardRows = (data?.netsuiteDashboardRows || []).filter((r: any) => r.project_id === selectedProject.id)
+                      const dfirst = dashboardRows[0]
+                      if (!dfirst) return null
+                      const dashboardTiles = [
+                        { label: 'Prime Resource', value: dfirst.prime_resource, sub: 'assigned lead' },
+                        { label: '% Complete', value: dfirst.pct_complete != null ? `${Number(dfirst.pct_complete).toFixed(0)}%` : null, sub: 'overall progress' },
+                        { label: 'Contract Signed', value: dfirst.contract_signed_date, sub: 'date' },
+                        { label: 'Last Time Entry', value: dfirst.last_time_entry_date, sub: 'most recent activity' },
+                        { label: 'Services Backlog', value: dfirst.services_backlog != null ? `$${Number(dfirst.services_backlog).toLocaleString()}` : null, sub: 'remaining' },
+                        { label: 'Services Revenue', value: dfirst.services_revenue != null ? `$${Number(dfirst.services_revenue).toLocaleString()}` : null, sub: 'recognized' },
                       ]
                       return (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                            {tiles.map(t => (
-                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
-                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
-                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
-                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
-                                </p>
-                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
-                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
-                          </p>
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                              <thead>
-                                <tr>
-                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
-                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rows.map((r: any) => (
-                                  <tr key={r.id}>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
-                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
-                                    </td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
-                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                          {dashboardTiles.map(t => (
+                            <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
+                              <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
+                              <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '15px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
+                                {t.value ?? '—'}
+                              </p>
+                              <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
+                            </div>
+                          ))}
+                        </div>
                       )
                     })()}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}            ))}
-                  </div>
-                )}
-                {activeTab === 'netsuite' && (
-                  <div>
                     {(() => {
                       const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
-                      if (rows.length === 0) {
+                      const hasDashboardData = (data?.netsuiteDashboardRows || []).some((r: any) => r.project_id === selectedProject.id)
+                      if (rows.length === 0 && !hasDashboardData) {
                         return (
                           <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
                             No NetSuite data imported for this project yet.
                           </p>
                         )
                       }
-                      const first = rows[0]
-                      const tiles = [
-                        { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
-                        { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
-                        { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
-                        { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
-                        { label: 'Approved Hours', value: first.project_approved_hours, sub: 'timesheet-approved' },
-                      ]
-                      return (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                            {tiles.map(t => (
-                              <div key={t.label} style={{ background: '#fff', border: '1px solid #EAECEE', borderTop: '3px solid #A50021', borderRadius: '8px', padding: '12px 14px' }}>
-                                <p style={{ fontSize: '9.5px', letterSpacing: '0.6px', textTransform: 'uppercase', color: '#9aa0a6', fontFamily: 'Oswald, sans-serif', fontWeight: 600, margin: 0 }}>{t.label}</p>
-                                <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '19px', fontWeight: 600, color: '#323E48', margin: '4px 0 2px' }}>
-                                  {t.value != null ? Number(t.value).toFixed(2) : '—'}
-                                </p>
-                                <p style={{ fontSize: '9.5px', color: '#aab0b5', margin: 0 }}>{t.sub}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13px', fontWeight: 600, color: '#323E48', marginBottom: '10px' }}>
-                            Activity detail — {rows.length} task{rows.length !== 1 ? 's' : ''}
-                          </p>
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                              <thead>
-                                <tr>
-                                  {['ID', 'Task / activity', 'Type', 'Planned', 'Gap', 'Budget'].map(h => (
-                                    <th key={h} style={{ background: '#EEF1F2', color: '#323E48', fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: '10.5px', letterSpacing: '0.3px', textTransform: 'uppercase', textAlign: 'left', padding: '9px 10px', borderBottom: '2px solid #dfe3e6' }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rows.map((r: any) => (
-                                  <tr key={r.id}>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.id_number}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>{r.task_name}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2' }}>
-                                      {r.task_type && <span style={{ fontSize: '10px', background: '#eef2f5', color: '#5c6b76', padding: '2px 7px', borderRadius: '4px' }}>{r.task_type}</span>}
-                                    </td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: '#3a4650' }}>{r.planned_hours != null ? Number(r.planned_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', textAlign: 'right', color: Number(r.gap_hours) < 0 ? '#8E1537' : '#1e7d46' }}>{r.gap_hours != null ? Number(r.gap_hours).toFixed(2) : ''}</td>
-                                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #eef1f2', color: '#3a4650' }}>
-                                      {r.activity_budget_amount != null ? `${Number(r.activity_budget_amount).toLocaleString()} ${r.activity_budget_currency || ''}` : ''}
-                                    </td>
-                                  </tr>
-                                       ))}
-                  </div>
-                )}
-                {activeTab === 'netsuite' && (
-                  <div>
-                    {(() => {
-                      const rows = (data?.netsuiteTaskRows || []).filter((r: any) => r.project_id === selectedProject.id)
-                      if (rows.length === 0) {
-                        return (
-                          <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
-                            No NetSuite data imported for this project yet.
-                          </p>
-                        )
-                      }
+                      if (rows.length === 0) return null
                       const first = rows[0]
                       const tiles = [
                         { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },

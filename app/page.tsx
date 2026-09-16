@@ -153,6 +153,7 @@ export default function Dashboard() {
 
   const activeMilestone = milestones.find((m: any) => m.status === 'active') || milestones.find((m: any) => m.status !== 'done')
   const doneCount = milestones.filter((m: any) => m.status === 'done').length
+  const displayMilestones = milestones.length > 0 ? milestones : (project?.start_date && project?.end_date ? [{ id: 'project-timeline-fallback', title: 'Project Timeline', start_date: project.start_date, due_date: project.end_date, status: 'active', owner: null, pct_complete: project.pct_complete || 0 }] : [])
 
   async function patchProject(fields: any) {
     await fetch(`/api/projects/${project.id}`, {
@@ -388,12 +389,12 @@ export default function Dashboard() {
                 <h3 style={headingStyle}>Implementation Timeline</h3>
                 {isAdmin && <button style={addBtn} onClick={() => setAddingMilestone(true)}>+ Add Milestone</button>}
               </div>
-              {milestones.length === 0 && !addingMilestone && (
+              {displayMilestones.length === 0 && !addingMilestone && (
                 <div style={{ padding: '16px 0', color: C.lightGray, fontSize: '12px', textAlign: 'center' }}>No milestones yet</div>
               )}
-              {milestones.length > 0 && (() => {
+              {displayMilestones.length > 0 && (() => {
                 const DAY_MS = 1000 * 60 * 60 * 24
-                const timelineDates = milestones
+                const timelineDates = displayMilestones
                   .flatMap((m: any) => [m.start_date, m.due_date])
                   .filter(Boolean)
                   .map((d: string) => new Date(d).getTime())
@@ -444,7 +445,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     {/* Bars */}
-                    {milestones.map((m: any, i: number) => {
+                    {displayMilestones.map((m: any, i: number) => {
                       const mStart = m.start_date ? new Date(m.start_date).getTime() : ganttMin
                       const mEndRaw = m.due_date ? new Date(m.due_date).getTime() : mStart + DAY_MS * 3
                       const mEnd = Math.max(mEndRaw, mStart + DAY_MS)
@@ -534,6 +535,9 @@ export default function Dashboard() {
                     <input type="date" style={inputStyle} value={newMilestone.due_date} onChange={e => setNewMilestone({ ...newMilestone, due_date: e.target.value })} />
                   </div>
                   <input style={inputStyle} placeholder="Owner" value={newMilestone.owner} onChange={e => setNewMilestone({ ...newMilestone, owner: e.target.value })} />
+                  <select style={inputStyle} value={newMilestone.status} onChange={e => setNewMilestone({ ...newMilestone, status: e.target.value })}>
+                    {MILESTONE_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button style={primaryBtn} onClick={createMilestone}>Add</button>
                     <button style={secondaryBtn} onClick={() => setAddingMilestone(false)}>Cancel</button>
