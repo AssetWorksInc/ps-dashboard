@@ -1256,7 +1256,7 @@ export default function ProjectCenter() {
                           >
                             <option value="todo">To Do</option>
                             <option value="in_progress">In Progress</option>
-                            <option value="waiting_on_customer">Waiting on Customer</option>
+                            <option value="waiting_on_customer">Action Needed</option>
                             <option value="done">Done</option>
                           </select>
                         </div>
@@ -1281,7 +1281,7 @@ export default function ProjectCenter() {
                       {[
                         { id: 'todo', label: 'To Do', accent: '#00538C' },
                         { id: 'in_progress', label: 'In Progress', accent: '#A50021' },
-                        { id: 'waiting_on_customer', label: 'Waiting on Customer', accent: '#8a6400' },
+                        { id: 'waiting_on_customer', label: 'Action Needed', accent: '#8a6400' },
                         { id: 'done', label: 'Done', accent: '#2E7D32' },
                       ].map(col => {
                         const colTasks = tasks.filter((t: any) => t.status === col.id)
@@ -1319,7 +1319,7 @@ export default function ProjectCenter() {
                                         >
                                           <option value="todo">To Do</option>
                                           <option value="in_progress">In Progress</option>
-                                          <option value="waiting_on_customer">Waiting on Customer</option>
+                                          <option value="waiting_on_customer">Action Needed</option>
                                           <option value="done">Done</option>
                                         </select>
                                         <button
