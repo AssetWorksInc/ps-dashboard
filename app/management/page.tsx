@@ -271,6 +271,9 @@ export default function ManagementDashboardPage() {
               <Link href="/management/portfolio" style={{ color: '#00538C' }}>
                 Full portfolio and triage queue
               </Link>
+              <Link href="/management/team-load" style={{ color: '#00538C' }}>
+                Team &amp; Load capacity view
+              </Link>
               <Link href="/projects" style={{ color: '#00538C' }}>
                 Project Center
               </Link>
