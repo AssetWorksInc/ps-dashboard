@@ -1900,11 +1900,11 @@ export default function ProjectCenter() {
                         ))}
                       </tbody>
                     </table>
-                    {/* NetSuite Data (folded in from the old standalone NetSuite Report tab) */}
+                    {/* DELIVERY DETAIL (formerly "NetSuite Data" -- relabeled for customer-facing clarity, still fed by NetSuite imports) */}
                     <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #EAECEE' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
-                          NetSuite Data
+                          Delivery Detail
                         </h3>
                         {isAdmin && (
                           <div style={{ display: 'flex', gap: '8px' }}>
@@ -1939,7 +1939,7 @@ export default function ProjectCenter() {
                         const dfirst = dashboardRows[0]
                         if (!dfirst) return null
                         const dashboardTiles = [
-                          { label: 'Prime Resource', value: dfirst.prime_resource, sub: 'assigned lead' },
+                          { label: 'Project Lead', value: dfirst.prime_resource, sub: 'assigned lead' },
                           { label: '% Complete', value: dfirst.pct_complete != null ? `${Number(dfirst.pct_complete).toFixed(0)}%` : null, sub: 'overall progress' },
                           { label: 'Contract Signed', value: dfirst.contract_signed_date, sub: 'date' },
                           { label: 'Last Time Entry', value: dfirst.last_time_entry_date, sub: 'most recent activity' },
@@ -1966,14 +1966,14 @@ export default function ProjectCenter() {
                         if (rows.length === 0 && !hasDashboardData) {
                           return (
                             <p style={{ fontSize: '12px', color: '#8a9199', padding: '20px 0' }}>
-                              No NetSuite data imported for this project yet.
+                              No delivery detail available for this project yet.
                             </p>
                           )
                         }
                         if (rows.length === 0) return null
                         const first = rows[0]
                         const tiles = [
-                          { label: 'Planned Hours', value: first.project_planned_hours, sub: 'from NetSuite rollup' },
+                          { label: 'Planned Hours', value: first.project_planned_hours, sub: 'rollup total' },
                           { label: 'Worked Hours', value: first.project_worked_hours, sub: 'actuals to date' },
                           { label: 'Gap Hours', value: first.project_gap_hours, sub: 'planned − worked' },
                           { label: 'Billed Hours', value: first.project_billed_hours, sub: 'invoiced to date' },
