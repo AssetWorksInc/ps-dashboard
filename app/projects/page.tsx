@@ -2028,11 +2028,11 @@ export default function ProjectCenter() {
                     </div>
                   </div>
                 )}
-                {/* DOCUMENTS (folded in: SOP Checklist + Reference Documents) */}
+                {/* DOCUMENTS (folded in: Project Checklist, formerly "SOP Checklist" + Reference Documents) */}
                 {activeTab === 'documents' && (
                   <div>
                     <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', marginBottom: '10px' }}>
-                      SOP Checklist
+                      Project Checklist
                     </h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontSize: '10px', color: '#8a9199', fontWeight: 600 }}>
