@@ -1082,11 +1082,12 @@ export default function ProjectCenter() {
                             </div>
                           ))}
                         </div>
-                        {contacts.length > 4 && (
-                          <p style={{ fontSize: '10.5px', color: '#8a9199', marginTop: '6px' }}>
-                            +{contacts.length - 4} more in Customer Contacts →
-                          </p>
-                        )}
+                        <button
+                          onClick={() => setActiveTab('contacts')}
+                          style={{ display: 'block', background: 'none', border: 'none', padding: 0, marginTop: '6px', fontSize: '10.5px', color: '#00538C', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          {contacts.length > 4 ? `+${contacts.length - 4} more in Customer Contacts →` : 'View all in Customer Contacts →'}
+                        </button>
                       </div>
                     )}
                     <p style={{ fontSize: '13px', color: '#697077', lineHeight: 1.7, marginBottom: '20px' }}>
@@ -1398,9 +1399,17 @@ export default function ProjectCenter() {
                               Set a Start and End date in the Overview tab to see the visual timeline.
                             </p>
                           )}
-                          <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase' as const, letterSpacing: '.5px', color: '#A50021', marginBottom: '10px' }}>
-                            Deliverables by Due Date
-                          </h3>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase' as const, letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                              Deliverables by Due Date
+                            </h3>
+                            <button
+                              onClick={() => setActiveTab('deliverables')}
+                              style={{ background: 'none', border: 'none', padding: 0, fontSize: '10.5px', color: '#00538C', cursor: 'pointer', textDecoration: 'underline' }}
+                            >
+                              Manage in Deliverables →
+                            </button>
+                          </div>
                           {sorted.length === 0 && undated.length === 0 ? (
                             <p style={{ fontSize: '12px', color: '#8a9199' }}>No deliverables yet.</p>
                           ) : (
