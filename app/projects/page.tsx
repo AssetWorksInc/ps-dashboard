@@ -206,6 +206,7 @@ export default function ProjectCenter() {
   const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
   const hoursUsed = lineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
   const hoursRemaining = Math.max(hoursTotal - hoursUsed, 0)
+  const hasActivityDetailImport = (data?.netsuiteTaskRows || []).some((r: any) => r.project_id === selectedProject?.id)
   const hourlyRate = Number(selectedProject?.hourly_rate) || 0
   const valueUsed = hoursUsed * hourlyRate
   const valueRemaining = hoursRemaining * hourlyRate
@@ -261,6 +262,7 @@ export default function ProjectCenter() {
           budget_hours_total: budgetDraft.budget_hours_total === '' ? null : Number(budgetDraft.budget_hours_total),
           hourly_rate: budgetDraft.hourly_rate === '' ? null : Number(budgetDraft.hourly_rate),
           budget_status: budgetDraft.budget_status,
+          budget_manual_override: true,
         }),
       })
       const result = await res.json()
@@ -1707,9 +1709,16 @@ export default function ProjectCenter() {
                           </div>
                         </div>
                       ) : (
-                        <p style={{ fontSize: '11px', color: '#697077', margin: 0 }}>
-                          {hourlyRate > 0 ? `$${hourlyRate}/hr` : 'No hourly rate set'} · {hoursTotal > 0 ? `${hoursTotal} budgeted hours` : 'No hour budget set'}
-                        </p>
+                        <>
+                          <p style={{ fontSize: '11px', color: '#697077', margin: 0 }}>
+                            {hourlyRate > 0 ? `$${hourlyRate}/hr` : 'No hourly rate set'} · {hoursTotal > 0 ? `${hoursTotal} budgeted hours` : 'No hour budget set'}
+                          </p>
+                          {!selectedProject.budget_manual_override && hoursTotal === 0 && hoursUsed === 0 && !hasActivityDetailImport && (
+                            <p style={{ fontSize: '10.5px', color: '#8a9199', margin: '6px 0 0', fontStyle: 'italic' as const }}>
+                              Budgeted and Used Hours will auto-fill once an Activity Detail Report is imported for this project.
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                     {/* Line items */}

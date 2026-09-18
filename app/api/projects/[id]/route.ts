@@ -6,6 +6,7 @@ const EDITABLE_FIELDS = [
   'name', 'description', 'status', 'health', 'pct_complete', 'pm_name',
   'start_date', 'end_date', 'go_live_date', 'go_live_label',
   'budget_hours_total', 'budget_hours_used', 'hourly_rate', 'budget_status',
+  'budget_manual_override',
 ]
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

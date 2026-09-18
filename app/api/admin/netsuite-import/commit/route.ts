@@ -185,8 +185,14 @@ export async function POST(req: NextRequest) {
 
         const rollup = labelRows[0] as NetsuiteTaskRow | undefined
         if (rollup) {
+          // Only auto-fill Budgeted/Used Hours from NetSuite's own rollup when
+          // nobody has manually set Budget Settings for this project -- once a
+          // PM saves Budget Settings by hand, budget_manual_override flips true
+          // and future imports stop touching these two columns, so a manual
+          // entry can never be silently clobbered by the next import.
           await client.query(
-            `UPDATE projects SET budget_hours_total = $1, budget_hours_used = $2 WHERE id = $3`,
+            `UPDATE projects SET budget_hours_total = $1, budget_hours_used = $2
+             WHERE id = $3 AND budget_manual_override IS NOT TRUE`,
             [rollup.projectPlannedHours, rollup.projectWorkedHours, projectId]
           )
         }
