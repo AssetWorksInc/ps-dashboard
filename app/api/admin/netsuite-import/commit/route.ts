@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
   let updated = 0
   let skipped = 0
   let totalRowsWritten = 0
+  let duplicatesPrevented = 0
 
   try {
     await client.query('BEGIN')
@@ -92,16 +93,32 @@ export async function POST(req: NextRequest) {
       } else {
         const tenantId = decision.tenantId || (await findOrCreateTenant(decision.newTenantName!.trim()))
         const projectName = decision.newProjectName?.trim() || decision.label
-        const insertResult = await client.query(
-          `INSERT INTO projects
-            (tenant_id, name, health, status, pct_complete)
-           VALUES ($1, $2, 'green', 'active', 0)
-           RETURNING id`,
+
+        // Last-line duplicate guard: regardless of how the "create" decision was
+        // reached (a stale label match, a re-worded NetSuite export, an admin not
+        // recognizing a renamed project), never create a second project with the
+        // same name under the same customer -- that is exactly how the
+        // Byu — P001 IWMS Implementation Services duplicate happened.
+        const dupe = await client.query(
+          `SELECT id FROM projects WHERE tenant_id = $1 AND lower(name) = lower($2) LIMIT 1`,
           [tenantId, projectName]
         )
-        projectId = insertResult.rows[0].id
-        created++
-        createdThisProject = true
+        if (dupe.rows.length > 0) {
+          projectId = dupe.rows[0].id
+          updated++
+          duplicatesPrevented++
+        } else {
+          const insertResult = await client.query(
+            `INSERT INTO projects
+              (tenant_id, name, health, status, pct_complete)
+             VALUES ($1, $2, 'green', 'active', 0)
+             RETURNING id`,
+            [tenantId, projectName]
+          )
+          projectId = insertResult.rows[0].id
+          created++
+          createdThisProject = true
+        }
       }
 
       await client.query(
@@ -179,7 +196,7 @@ export async function POST(req: NextRequest) {
     await client.query(`UPDATE netsuite_report_imports SET row_count = $1 WHERE id = $2`, [totalRowsWritten, importId])
     await client.query('COMMIT')
 
-    return NextResponse.json({ success: true, importId, created, updated, skipped, totalRowsWritten })
+    return NextResponse.json({ success: true, importId, created, updated, skipped, totalRowsWritten, duplicatesPrevented })
   } catch (error) {
     await client.query('ROLLBACK')
     return NextResponse.json({ error: String(error) }, { status: 500 })

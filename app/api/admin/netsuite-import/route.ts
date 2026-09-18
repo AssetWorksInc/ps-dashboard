@@ -51,6 +51,37 @@ export async function POST(req: NextRequest) {
     )
     const mappedByLabel = new Map(existingMaps.rows.map(r => [r.netsuite_project_label, r]))
 
+    // Fallback match for labels NetSuite has re-worded since the last import: the
+    // label text is what netsuite_project_map keys on, but NetSuite's own internal
+    // project id (only present on dashboard-format rows) is far more stable than
+    // the label text, which can drift (punctuation, re-typed description, etc.)
+    // between exports of the very same project. Without this, a re-worded label
+    // silently defaults to "create," producing a duplicate project that shares
+    // the same internal id as one already on file.
+    const internalIdByLabel = new Map<string, string>()
+    if (parsed.reportType === 'dashboard') {
+      for (const row of parsed.dashboardRows) {
+        if (row.internalId && !mappedByLabel.has(row.label) && !internalIdByLabel.has(row.label)) {
+          internalIdByLabel.set(row.label, row.internalId)
+        }
+      }
+    }
+    const mappedByInternalId = new Map<string, (typeof existingMaps.rows)[number]>()
+    if (internalIdByLabel.size > 0) {
+      const internalIds = Array.from(new Set(internalIdByLabel.values()))
+      const byInternalId = await pool.query(
+        `SELECT DISTINCT ON (ndr.internal_id) ndr.internal_id AS netsuite_project_label,
+                p.id AS project_id, p.name AS project_name, p.tenant_id, t.name AS tenant_name
+         FROM netsuite_dashboard_rows ndr
+         JOIN projects p ON p.id = ndr.project_id
+         JOIN tenants t ON t.id = p.tenant_id
+         WHERE ndr.internal_id = ANY($1::text[])
+         ORDER BY ndr.internal_id, ndr.created_at DESC`,
+        [internalIds]
+      )
+      for (const row of byInternalId.rows) mappedByInternalId.set(row.netsuite_project_label, row)
+    }
+
     const tenants = await pool.query(`SELECT id, name FROM tenants ORDER BY name ASC`)
     const existingProjects = await pool.query(
       `SELECT p.id, p.name, t.name AS tenant_name
@@ -62,6 +93,9 @@ export async function POST(req: NextRequest) {
       const rows = byLabel.get(label)!
       const parsedLabel = rows[0] ? parseNetsuiteLabel(label) : null
       const existing = mappedByLabel.get(label)
+      const internalId = internalIdByLabel.get(label)
+      const fallback = !existing && internalId ? mappedByInternalId.get(internalId) : undefined
+      const resolved = existing || fallback
       return {
         label,
         customerCode: parsedLabel?.customerCode ?? null,
@@ -70,11 +104,12 @@ export async function POST(req: NextRequest) {
         suggestedCustomerName: parsedLabel ? guessCustomerName(parsedLabel.customerCode) : null,
         suggestedProjectName: parsedLabel ? `${guessCustomerName(parsedLabel.customerCode)} — ${parsedLabel.rest}` : label,
         taskCount: rows.length,
-        matched: !!existing,
-        existingProjectId: existing?.project_id ?? null,
-        existingProjectName: existing?.project_name ?? null,
-        existingTenantId: existing?.tenant_id ?? null,
-        existingTenantName: existing?.tenant_name ?? null,
+        matched: !!resolved,
+        matchedByInternalId: !existing && !!fallback,
+        existingProjectId: resolved?.project_id ?? null,
+        existingProjectName: resolved?.project_name ?? null,
+        existingTenantId: resolved?.tenant_id ?? null,
+        existingTenantName: resolved?.tenant_name ?? null,
       }
     })
 

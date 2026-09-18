@@ -11,6 +11,7 @@ type DistinctLabel = {
   suggestedProjectName: string
   taskCount: number
   matched: boolean
+  matchedByInternalId?: boolean
   existingProjectId: string | null
   existingProjectName: string | null
   existingTenantId: string | null
@@ -457,7 +458,7 @@ export default function NetsuiteImportPage() {
                           padding: '3px 9px', borderRadius: '20px', fontSize: '10.5px', fontWeight: 600,
                           background: l.matched ? '#e5f3ea' : '#fdeee9', color: l.matched ? '#1e7d46' : '#8E1537',
                         }}>
-                          {l.matched ? `Matched → ${l.existingTenantName}` : 'New'}
+                          {l.matched ? `Matched → ${l.existingTenantName}${l.matchedByInternalId ? ' (by NetSuite ID, label changed)' : ''}` : 'New'}
                         </span>
                       </td>
                       <td style={{ padding: '9px 10px', borderBottom: '1px solid #edeff0' }}>
