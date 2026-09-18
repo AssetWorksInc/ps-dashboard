@@ -74,6 +74,9 @@ export default function PortfolioPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [bulkStatus, setBulkStatus] = useState<string>('GREEN')
+  const [bulkSaving, setBulkSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/portfolio')
@@ -199,6 +202,35 @@ export default function PortfolioPage() {
     })
     return list
   }, [projects, q, prime, statusFilter, backlogOnly, staleOnly, noEpicOnly, sortKey, sortDir])
+
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected])
+  const allFilteredSelected = filteredSorted.length > 0 && filteredSorted.every((p) => selected[p.id])
+
+  function toggleSelectAllFiltered() {
+    const shouldSelect = !allFilteredSelected
+    setSelected((s) => {
+      const next = { ...s }
+      filteredSorted.forEach((p) => { next[p.id] = shouldSelect })
+      return next
+    })
+  }
+
+  async function applyBulkStatus() {
+    const ids = selectedIds
+    if (ids.length === 0) return
+    setBulkSaving(true)
+    setProjects((prev) => prev && prev.map((p) => (ids.includes(p.id) ? { ...p, engagementStatus: bulkStatus } : p)))
+    try {
+      await fetch('/api/admin/portfolio', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, field: 'engagement_status', value: bulkStatus }),
+      })
+    } finally {
+      setBulkSaving(false)
+      setSelected({})
+    }
+  }
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
@@ -372,10 +404,39 @@ export default function PortfolioPage() {
         <span style={{ fontSize: '11px', color: MUTED }}>{filteredSorted.length} of {totals.count}</span>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', background: '#FBEFF1', border: `1px solid ${RED}`, borderRadius: '8px', padding: '8px 14px', marginBottom: '12px' }}>
+          <span style={{ fontSize: '12px', color: INK, fontWeight: 700 }}>{selectedIds.length} selected</span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            style={{ fontSize: '12px', padding: '5px 8px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}
+          >
+            {STATUS_ORDER.map((k) => <option key={k} value={k}>{STATUS_META[k].label}</option>)}
+          </select>
+          <button
+            onClick={applyBulkStatus}
+            disabled={bulkSaving}
+            style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, background: RED, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 14px', cursor: bulkSaving ? 'default' : 'pointer', opacity: bulkSaving ? 0.6 : 1 }}
+          >
+            {bulkSaving ? 'Applying…' : `Apply status to ${selectedIds.length}`}
+          </button>
+          <button
+            onClick={() => setSelected({})}
+            style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, background: 'transparent', color: MUTED, border: `1px solid ${BORDER}`, borderRadius: '6px', padding: '6px 12px', cursor: 'pointer' }}
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '8px 0 16px', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
           <thead>
             <tr>
+              <th style={{ background: INK, padding: '7px 9px' }}>
+                <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAllFiltered} aria-label="Select all" />
+              </th>
               {[
                 { key: 'name', label: 'Project' },
                 { key: null, label: 'PID' },
@@ -403,7 +464,7 @@ export default function PortfolioPage() {
           </thead>
           <tbody>
             {filteredSorted.length === 0 && (
-              <tr><td colSpan={13} style={{ padding: '26px', textAlign: 'center', color: MUTED }}>Nothing matches those filters.</td></tr>
+              <tr><td colSpan={14} style={{ padding: '26px', textAlign: 'center', color: MUTED }}>Nothing matches those filters.</td></tr>
             )}
             {filteredSorted.map((p) => {
               const meta = STATUS_META[p.engagementStatus] || STATUS_META.OPEN
@@ -414,6 +475,9 @@ export default function PortfolioPage() {
               return (
                 <Fragment key={p.id}>
                   <tr id={'row-' + p.id} style={{ background: isRed ? '#FDF2F4' : undefined }}>
+                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
+                      <input type="checkbox" checked={!!selected[p.id]} onChange={() => setSelected((s) => ({ ...s, [p.id]: !s[p.id] }))} aria-label={'Select ' + p.name} />
+                    </td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'top' }}>
                       <div style={{ fontWeight: 700, color: INK }}>{p.name}</div>
                       {p.pmComment && <div style={{ fontSize: '10.5px', color: '#3a4650' }}><b>PM</b> {p.pmComment.slice(0, 100)}{p.pmComment.length > 100 ? '…' : ''}</div>}
@@ -461,7 +525,7 @@ export default function PortfolioPage() {
                   </tr>
                   {isExpanded && (
                     <tr style={{ background: '#FAFBFC' }}>
-                      <td colSpan={13} style={{ padding: '12px 16px' }}>
+                      <td colSpan={14} style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
                           <EditField label="Jira epic" value={p.epic} onSave={(v) => saveField(p.id, 'epic', v)} placeholder="PS-1180" />
                           <EditField label="Confluence link" value={p.confluenceUrl} onSave={(v) => saveField(p.id, 'confluence_url', v)} placeholder="https://goassetworks.atlassian.net/wiki/..." />

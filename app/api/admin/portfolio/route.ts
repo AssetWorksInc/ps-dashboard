@@ -101,10 +101,11 @@ export async function PATCH(req: NextRequest) {
   if (user.role !== 'admin') return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
 
   const body = await req.json()
-  const { id, field, value } = body
+  const { id, ids, field, value } = body
+  const targetIds: string[] = Array.isArray(ids) && ids.length > 0 ? ids : id ? [id] : []
 
-  if (!id || !field) {
-    return NextResponse.json({ error: 'id and field are required' }, { status: 400 })
+  if (targetIds.length === 0 || !field) {
+    return NextResponse.json({ error: 'id (or ids) and field are required' }, { status: 400 })
   }
   if (!EDITABLE_FIELDS.includes(field)) {
     return NextResponse.json({ error: 'Field is not editable' }, { status: 400 })
@@ -116,7 +117,7 @@ export async function PATCH(req: NextRequest) {
   const column = field as (typeof EDITABLE_FIELDS)[number]
   const cleanValue = value === '' ? null : value
 
-  await pool.query(`UPDATE projects SET ${column} = $1 WHERE id = $2`, [cleanValue, id])
+  await pool.query(`UPDATE projects SET ${column} = $1 WHERE id = ANY($2)`, [cleanValue, targetIds])
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, count: targetIds.length })
 }
