@@ -296,14 +296,29 @@ export default function ProjectCenter() {
     }
   }
   async function saveLineItem(id: string) {
+    const original = lineItems.find((li: any) => li.id === id)
+    const newActivityName = lineItemDraft.activity_name
+    const newHoursPlanned = lineItemDraft.hours_planned === '' ? 0 : Number(lineItemDraft.hours_planned)
+    const newHoursWorked = lineItemDraft.hours_worked === '' ? 0 : Number(lineItemDraft.hours_worked)
+    const payload: any = {
+      activity_name: newActivityName,
+      hours_planned: newHoursPlanned,
+      hours_worked: newHoursWorked,
+    }
+    // A NetSuite-sourced row only locks out of future auto-refresh when its
+    // Activity Name or Planned Hours is hand-edited -- editing Worked Hours
+    // alone never sets this, since NetSuite has no per-task worked-hours
+    // figure to protect there in the first place.
+    if (
+      original?.source === 'netsuite' && !original.manual_override &&
+      (original.activity_name !== newActivityName || Number(original.hours_planned) !== newHoursPlanned)
+    ) {
+      payload.manual_override = true
+    }
     const res = await fetch(`/api/budget-line-items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        activity_name: lineItemDraft.activity_name,
-        hours_planned: lineItemDraft.hours_planned === '' ? 0 : Number(lineItemDraft.hours_planned),
-        hours_worked: lineItemDraft.hours_worked === '' ? 0 : Number(lineItemDraft.hours_worked),
-      }),
+      body: JSON.stringify(payload),
     })
     const result = await res.json()
     if (result.success) {
@@ -1793,7 +1808,14 @@ export default function ProjectCenter() {
                               </>
                             ) : (
                               <>
-                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>{li.activity_name}</td>
+                                <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#323E48', fontWeight: 500 }}>
+                                  {li.activity_name}
+                                  {li.source === 'netsuite' && (
+                                    <span title={li.manual_override ? 'Originally imported from NetSuite; manually edited since, so it no longer auto-updates.' : 'Imported from NetSuite; refreshes automatically on the next Activity Detail import.'} style={{ marginLeft: '7px', fontSize: '9px', fontWeight: 700, color: li.manual_override ? '#8a9199' : '#00538C', border: '1px solid #CCCCCC', borderRadius: '3px', padding: '1px 5px', textTransform: 'uppercase' as const, letterSpacing: '.3px' }}>
+                                      {li.manual_override ? 'NetSuite \u00b7 edited' : 'NetSuite'}
+                                    </span>
+                                  )}
+                                </td>
                                 <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{Number(li.hours_planned).toFixed(1)}</td>
                                 <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{Number(li.hours_worked).toFixed(1)}</td>
                                 <td style={{ borderBottom: '1px solid #CCCCCC', padding: '9px 10px', fontSize: '12px', color: '#697077' }}>{(Number(li.hours_planned) - Number(li.hours_worked)).toFixed(1)}</td>

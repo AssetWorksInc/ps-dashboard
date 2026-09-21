@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
-const EDITABLE_FIELDS = ['activity_name', 'hours_planned', 'hours_worked', 'sort_order']
+const EDITABLE_FIELDS = ['activity_name', 'hours_planned', 'hours_worked', 'sort_order', 'manual_override']
 
 async function assertOwnership(id: string, tenantId: string) {
   const existing = await pool.query('SELECT tenant_id FROM budget_line_items WHERE id = $1', [id])

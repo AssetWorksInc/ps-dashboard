@@ -58,7 +58,8 @@ export async function GET() {
       params
     )
     const budgetLineItems = await pool.query(
-      `SELECT id, project_id, activity_name, hours_planned, hours_worked, sort_order, created_at
+      `SELECT id, project_id, activity_name, hours_planned, hours_worked, sort_order, created_at,
+              source, netsuite_id_number, manual_override
        FROM budget_line_items
        ${scope}
        ORDER BY project_id, sort_order ASC, created_at ASC`,

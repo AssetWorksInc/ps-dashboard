@@ -196,6 +196,44 @@ export async function POST(req: NextRequest) {
             [rollup.projectPlannedHours, rollup.projectWorkedHours, projectId]
           )
         }
+
+        // Mirror each task with its own NetSuite ID onto a Hours-by-Activity
+        // line item, so that table can stay in sync with NetSuite instead of
+        // being entirely hand-typed. A task with no NetSuite ID is skipped --
+        // there's no safe way to recognize it again on the next import, so it
+        // stays visible only in the read-only Delivery Detail task table. A
+        // line item already flagged manual_override is left untouched (same
+        // override pattern as the rollup above); Worked Hours is never
+        // touched here, since NetSuite's Activity Detail Report has no
+        // per-task worked-hours figure to draw from -- it's PM-entered
+        // either way, imported row or not.
+        const projectTenant = await client.query(`SELECT tenant_id FROM projects WHERE id = $1`, [projectId])
+        const projectTenantId = projectTenant.rows[0]?.tenant_id
+        if (projectTenantId) {
+          for (const row of labelRows as NetsuiteTaskRow[]) {
+            if (!row.idNumber) continue
+            const upd = await client.query(
+              `UPDATE budget_line_items
+               SET activity_name = COALESCE($1, activity_name), hours_planned = COALESCE($2, hours_planned)
+               WHERE project_id = $3 AND netsuite_id_number = $4 AND manual_override IS NOT TRUE`,
+              [row.taskName, row.plannedHours, projectId, row.idNumber]
+            )
+            if (upd.rowCount === 0) {
+              const existing = await client.query(
+                `SELECT id FROM budget_line_items WHERE project_id = $1 AND netsuite_id_number = $2`,
+                [projectId, row.idNumber]
+              )
+              if (existing.rows.length === 0) {
+                await client.query(
+                  `INSERT INTO budget_line_items
+                    (tenant_id, project_id, activity_name, hours_planned, hours_worked, source, netsuite_id_number, manual_override)
+                   VALUES ($1, $2, $3, $4, 0, 'netsuite', $5, false)`,
+                  [projectTenantId, projectId, row.taskName || row.label, row.plannedHours, row.idNumber]
+                )
+              }
+            }
+          }
+        }
       }
     }
 
