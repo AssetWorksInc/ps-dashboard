@@ -203,8 +203,14 @@ export default function ProjectCenter() {
   const statusLabel = (s: string) => s === 'green' ? 'On Track' : s === 'yellow' ? 'At Risk' : s === 'red' ? 'Critical' : 'N/A'
   const docIcon = (t: string) => t === 'pdf' ? '📄' : (t === 'doc' || t === 'docx') ? '📝' : (t === 'xls' || t === 'xlsx') ? '📊' : (t === 'ppt' || t === 'pptx') ? '📈' : '📁'
   const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
-  const hoursUsedFromItems = lineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
-  const hoursUsed = lineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
+  // Only line items a person actually drove -- hand-added, or a NetSuite-mirrored
+  // row someone has edited -- count toward "there's real manual data here." An
+  // untouched NetSuite-mirrored row (source: 'netsuite', not yet overridden) is
+  // ignored for this check, so importing NetSuite tasks alone never flips Hours
+  // Used away from the trusted rollup; only a person's own entry does.
+  const manualLineItems = lineItems.filter((li: any) => li.source !== 'netsuite' || li.manual_override)
+  const hoursUsedFromItems = manualLineItems.reduce((sum: number, li: any) => sum + (Number(li.hours_worked) || 0), 0)
+  const hoursUsed = manualLineItems.length > 0 ? hoursUsedFromItems : (Number(selectedProject?.budget_hours_used) || 0)
   const hoursRemaining = Math.max(hoursTotal - hoursUsed, 0)
   const hasActivityDetailImport = (data?.netsuiteTaskRows || []).some((r: any) => r.project_id === selectedProject?.id)
   const hourlyRate = Number(selectedProject?.hourly_rate) || 0
