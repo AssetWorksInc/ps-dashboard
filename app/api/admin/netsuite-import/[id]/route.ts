@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 // Undoes a single NetSuite import. For each project that import touched:
 //  - if THIS import is the one that created the project (created_by_import_id
@@ -32,7 +33,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     await client.query('BEGIN')
 
-    const importRow = await client.query(`SELECT id FROM netsuite_report_imports WHERE id = $1`, [importId])
+    const importRow = await client.query(
+      `SELECT id, filename, report_title FROM netsuite_report_imports WHERE id = $1`,
+      [importId]
+    )
     if (importRow.rows.length === 0) {
       await client.query('ROLLBACK')
       return NextResponse.json({ error: 'Import not found' }, { status: 404 })
@@ -86,6 +90,21 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
     await client.query(`DELETE FROM netsuite_report_imports WHERE id = $1`, [importId])
     await client.query('COMMIT')
+
+    // One summarized entry for the whole undo, same reasoning as the commit
+    // route -- this can touch dozens of projects in one action.
+    await logActivity({
+      tenantId: null,
+      projectId: null,
+      module: 'netsuite_import',
+      entityType: 'import',
+      entityId: importId,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: importRow.rows[0].report_title || importRow.rows[0].filename || 'NetSuite import',
+      detail: `${projectsDeleted} projects deleted · ${projectsCleared} cleared · ${projectsKept} kept`,
+    })
 
     return NextResponse.json({ success: true, projectsDeleted, projectsCleared, projectsKept })
   } catch (error) {

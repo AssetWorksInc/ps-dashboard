@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { findOrCreateTenant } from '@/lib/tenants'
+import { logActivity } from '@/lib/activityLog'
 import type { NetsuiteReportType, NetsuiteTaskRow, NetsuiteDashboardRow } from '@/lib/netsuiteReport'
 
 interface Decision {
@@ -239,6 +240,31 @@ export async function POST(req: NextRequest) {
 
     await client.query(`UPDATE netsuite_report_imports SET row_count = $1 WHERE id = $2`, [totalRowsWritten, importId])
     await client.query('COMMIT')
+
+    // One summarized activity entry per import rather than one per project or
+    // per row -- a single import can touch dozens of projects and hundreds of
+    // underlying task/dashboard rows, and logging each would flood the feed
+    // (same reasoning as the Portfolio bulk-edit threshold).
+    const detailParts = [
+      `${created} created`,
+      `${updated} updated`,
+      `${skipped} skipped`,
+      `${totalRowsWritten} rows`,
+    ]
+    if (duplicatesPrevented > 0) detailParts.push(`${duplicatesPrevented} duplicates avoided`)
+
+    await logActivity({
+      tenantId: null,
+      projectId: null,
+      module: 'netsuite_import',
+      entityType: 'import',
+      entityId: importId,
+      action: 'created',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: reportTitle || filename,
+      detail: detailParts.join(' · '),
+    })
 
     return NextResponse.json({ success: true, importId, created, updated, skipped, totalRowsWritten, duplicatesPrevented })
   } catch (error) {
