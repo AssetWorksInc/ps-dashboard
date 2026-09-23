@@ -83,6 +83,11 @@ export default function NetsuiteImportPage() {
   const [preview, setPreview] = useState<Preview | null>(null)
   const [decisions, setDecisions] = useState<Record<string, RowDecision>>({})
   const [customerFilter, setCustomerFilter] = useState('')
+  // Cleanly-matched projects (exact prior label match) default to auto-update
+  // and don't need a human to look at them -- they stay collapsed out of the
+  // review table unless this is toggled on, so a 200-project daily import only
+  // asks for attention on what's actually new or ambiguous.
+  const [showMatched, setShowMatched] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [result, setResult] = useState<{ created: number; updated: number; skipped: number; totalRowsWritten: number } | null>(null)
 
@@ -261,14 +266,16 @@ export default function NetsuiteImportPage() {
     })
   }
 
-  function setModeForVisible(checked: boolean) {
-    if (!preview) return
+  // Takes an explicit label list rather than re-deriving one from `preview` +
+  // the customer filter, so the header "select all" checkbox can be wired to
+  // whatever set of rows is actually on screen right now -- the full visible
+  // set, or just the collapsed-down needs-review set when matched rows are
+  // hidden.
+  function setModeForLabels(checked: boolean, labels: DistinctLabel[]) {
     setDecisions(prev => {
       const next = { ...prev }
-      for (const l of preview.distinctLabels) {
-        if (matchesCustomerFilter(l, customerFilter)) {
-          next[l.label] = { ...next[l.label], mode: checked ? (l.matched ? 'update' : 'create') : 'skip' }
-        }
+      for (const l of labels) {
+        next[l.label] = { ...next[l.label], mode: checked ? (l.matched ? 'update' : 'create') : 'skip' }
       }
       return next
     })
@@ -316,6 +323,17 @@ export default function NetsuiteImportPage() {
   const visibleLabels = preview ? preview.distinctLabels.filter(l => matchesCustomerFilter(l, customerFilter)) : []
   const hiddenCount = preview ? preview.distinctLabels.length - visibleLabels.length : 0
   const activeCount = preview ? preview.distinctLabels.filter(l => decisions[l.label]?.mode !== 'skip').length : 0
+
+  // Split by whether a row needs a human decision. A row matched by an exact
+  // label carried over from a prior import is already correctly set to
+  // auto-update and never needs a click; a row matched only through the
+  // NetSuite-internal-id fallback (its label text changed since last import)
+  // still surfaces, same as a brand-new project, since that match is a
+  // heuristic worth a first glance. This is what actually cuts a 200-project
+  // daily import down to reviewing only the handful that changed.
+  const autoMatchedLabels = visibleLabels.filter(l => l.matched && !l.matchedByInternalId)
+  const needsReviewLabels = visibleLabels.filter(l => !l.matched || l.matchedByInternalId)
+  const renderedLabels = showMatched ? visibleLabels : needsReviewLabels
 
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif', padding: '28px', maxWidth: '1100px', margin: '0 auto' }}>
@@ -404,6 +422,24 @@ export default function NetsuiteImportPage() {
             </span>
           </div>
 
+          {autoMatchedLabels.length > 0 && (
+            <div style={{
+              display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between',
+              background: '#e5f3ea', border: '1px solid #b9dcc5', borderRadius: '6px', padding: '10px 12px', marginBottom: '16px',
+            }}>
+              <span style={{ fontSize: '11.5px', color: '#1e7d46' }}>
+                {autoMatchedLabels.length} project{autoMatchedLabels.length !== 1 ? 's' : ''} matched cleanly and will update automatically — nothing to do below unless you want to double-check one.
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMatched(s => !s)}
+                style={{ padding: '6px 12px', background: '#fff', color: '#1e7d46', border: '1px solid #b9dcc5', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {showMatched ? 'Hide matched projects' : `Show matched projects (${autoMatchedLabels.length})`}
+              </button>
+            </div>
+          )}
+
           <datalist id="tenant-options">
             {preview.tenants.map(t => <option key={t.id} value={t.name} />)}
           </datalist>
@@ -415,8 +451,8 @@ export default function NetsuiteImportPage() {
                   <th style={{ background: '#323E48', color: '#fff', padding: '9px 10px', width: '34px' }}>
                     <input
                       type="checkbox"
-                      checked={visibleLabels.length > 0 && visibleLabels.every(l => decisions[l.label]?.mode !== 'skip')}
-                      onChange={e => setModeForVisible(e.target.checked)}
+                      checked={renderedLabels.length > 0 && renderedLabels.every(l => decisions[l.label]?.mode !== 'skip')}
+                      onChange={e => setModeForLabels(e.target.checked, renderedLabels)}
                       title="Select all shown"
                     />
                   </th>
@@ -429,6 +465,13 @@ export default function NetsuiteImportPage() {
                 </tr>
               </thead>
               <tbody>
+                {renderedLabels.length === 0 && visibleLabels.length > 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '20px 10px', textAlign: 'center', color: '#aab0b5' }}>
+                      Every visible project matched cleanly — nothing needs review. Click "Confirm &amp; Import" below, or "Show matched projects" above to double-check one.
+                    </td>
+                  </tr>
+                )}
                 {visibleLabels.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ padding: '20px 10px', textAlign: 'center', color: '#aab0b5' }}>
@@ -436,7 +479,7 @@ export default function NetsuiteImportPage() {
                     </td>
                   </tr>
                 )}
-                {visibleLabels.map(l => {
+                {renderedLabels.map(l => {
                   const d = decisions[l.label]
                   if (!d) return null
                   return (
