@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const UPLOAD_DIR = '/mnt/s3files/documents'
 
@@ -63,6 +64,19 @@ export async function POST(req: NextRequest) {
        RETURNING id, project_id, title, file_url, file_type, category, uploaded_by, created_at`,
       [tenantId, projectId || null, title || file.name, `/uploads/${fileName}`, ext, category || 'General', user.name || 'Portal User']
     )
+
+    await logActivity({
+      tenantId,
+      projectId: result.rows[0].project_id,
+      module: 'project_center',
+      entityType: 'document',
+      entityId: result.rows[0].id,
+      action: 'created',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: result.rows[0].title,
+      detail: result.rows[0].category ? `Category: ${result.rows[0].category}` : null,
+    })
 
     return NextResponse.json({
       success: true,

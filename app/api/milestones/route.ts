@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 export async function GET() {
   try {
@@ -59,6 +60,19 @@ export async function POST(req: NextRequest) {
         sort_order || 0,
       ]
     )
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: result.rows[0].project_id,
+      module: 'project_center',
+      entityType: 'milestone',
+      entityId: result.rows[0].id,
+      action: 'created',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: result.rows[0].title,
+      detail: result.rows[0].status ? `Status: ${result.rows[0].status}` : null,
+    })
 
     return NextResponse.json({ success: true, milestone: result.rows[0] })
   } catch (error) {

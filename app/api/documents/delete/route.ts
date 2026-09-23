@@ -3,6 +3,7 @@ import { unlink } from 'fs/promises'
 import { join, basename } from 'path'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 const UPLOAD_DIR = '/mnt/s3files/documents'
 export async function DELETE(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function DELETE(req: NextRequest) {
     }
     // Get the document record first
     const result = await pool.query(
-      'SELECT id, tenant_id, file_url FROM shared_documents WHERE id = $1',
+      'SELECT id, tenant_id, file_url, title, project_id FROM shared_documents WHERE id = $1',
       [id]
     )
     if (result.rows.length === 0) {
@@ -46,6 +47,19 @@ export async function DELETE(req: NextRequest) {
     }
     // Delete record from database
     await pool.query('DELETE FROM shared_documents WHERE id = $1', [id])
+
+    await logActivity({
+      tenantId: doc.tenant_id,
+      projectId: doc.project_id,
+      module: 'project_center',
+      entityType: 'document',
+      entityId: id,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: doc.title || 'Document',
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json(

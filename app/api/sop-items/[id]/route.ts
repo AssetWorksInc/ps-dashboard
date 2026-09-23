@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = ['title', 'description', 'status', 'due_date', 'sort_order']
 
@@ -57,6 +58,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       values
     )
 
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: result.rows[0].project_id,
+      module: 'project_center',
+      entityType: 'sop_item',
+      entityId: result.rows[0].id,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: result.rows[0].title,
+      detail: 'status' in body ? `Status: ${result.rows[0].status}` : null,
+    })
+
     return NextResponse.json({ success: true, item: result.rows[0] })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
@@ -74,7 +88,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (check === 'not_found') return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 })
     if (check === 'forbidden') return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
 
-    await pool.query('DELETE FROM sop_items WHERE id = $1', [id])
+    const deleted = await pool.query('DELETE FROM sop_items WHERE id = $1 RETURNING *', [id])
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: deleted.rows[0]?.project_id,
+      module: 'project_center',
+      entityType: 'sop_item',
+      entityId: id,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: deleted.rows[0]?.title || 'Checklist item',
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })

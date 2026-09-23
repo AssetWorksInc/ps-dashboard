@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = [
   'title', 'body', 'risks_decisions', 'meeting_date', 'attendees', 'action_items', 'project_id',
@@ -46,6 +47,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       values
     )
 
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: result.rows[0].project_id,
+      module: 'project_center',
+      entityType: 'meeting_note',
+      entityId: result.rows[0].id,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: result.rows[0].title,
+    })
+
     return NextResponse.json({ success: true, note: result.rows[0] })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
@@ -63,7 +76,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (check === 'not_found') return NextResponse.json({ error: 'Note not found' }, { status: 404 })
     if (check === 'forbidden') return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
 
-    await pool.query('DELETE FROM meeting_notes WHERE id = $1', [id])
+    const deleted = await pool.query('DELETE FROM meeting_notes WHERE id = $1 RETURNING *', [id])
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: deleted.rows[0]?.project_id,
+      module: 'project_center',
+      entityType: 'meeting_note',
+      entityId: id,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: deleted.rows[0]?.title || 'Meeting note',
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })

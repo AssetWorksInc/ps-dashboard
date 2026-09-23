@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = [
   'name', 'description', 'status', 'health', 'pct_complete', 'pm_name',
@@ -42,6 +43,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       `UPDATE projects SET ${updates.join(', ')} WHERE id = $${i} RETURNING *`,
       values
     )
+
+    await logActivity({
+      tenantId: result.rows[0].tenant_id,
+      projectId: result.rows[0].id,
+      module: 'project_center',
+      entityType: 'project',
+      entityId: result.rows[0].id,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: result.rows[0].name,
+    })
+
     return NextResponse.json({ success: true, project: result.rows[0] })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
@@ -61,7 +75,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
     const { id } = await params
-    const existing = await pool.query('SELECT id FROM projects WHERE id = $1', [id])
+    const existing = await pool.query('SELECT id, name, tenant_id FROM projects WHERE id = $1', [id])
     if (existing.rows.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
@@ -81,6 +95,20 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       await client.query('DELETE FROM meeting_notes WHERE project_id = $1', [id])
       await client.query('DELETE FROM projects WHERE id = $1', [id])
       await client.query('COMMIT')
+
+      await logActivity({
+        tenantId: existing.rows[0].tenant_id,
+        projectId: id,
+        module: 'project_center',
+        entityType: 'project',
+        entityId: id,
+        action: 'deleted',
+        actorName: user.name,
+        actorEmail: user.email,
+        summary: existing.rows[0].name || 'Project',
+        detail: 'Project and all associated deliverables, contacts, appointments, budget lines, billing charges, SOP items, documents, and meeting notes were removed.',
+      })
+
       return NextResponse.json({ success: true })
     } catch (error) {
       await client.query('ROLLBACK')
