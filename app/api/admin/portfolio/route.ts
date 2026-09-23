@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { signalFor } from '@/lib/portfolioSignal'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = [
   'engagement_status',
@@ -12,7 +13,21 @@ const EDITABLE_FIELDS = [
   'next_milestone_date',
 ] as const
 
+const FIELD_LABEL: Record<string, string> = {
+  engagement_status: 'Engagement Status',
+  epic: 'Epic',
+  confluence_url: 'Confluence URL',
+  pm_comment: 'PM Comment',
+  next_milestone: 'Next Milestone',
+  next_milestone_date: 'Next Milestone Date',
+}
+
 const VALID_STATUSES = ['GREEN', 'YELLOW', 'RED', 'BLUE', 'GREY', 'OPEN']
+
+// Above this many projects in one bulk edit, log a single summarized entry
+// instead of one row per project, so a large bulk update doesn't flood the
+// Activity feed the way a per-row NetSuite import would.
+const BULK_LOG_THRESHOLD = 15
 
 // Postgres `date` columns come back from pg as JS Date objects (local midnight),
 // and NextResponse.json() then serializes them to a full ISO timestamp. Reduce
@@ -117,7 +132,43 @@ export async function PATCH(req: NextRequest) {
   const column = field as (typeof EDITABLE_FIELDS)[number]
   const cleanValue = value === '' ? null : value
 
-  await pool.query(`UPDATE projects SET ${column} = $1 WHERE id = ANY($2)`, [cleanValue, targetIds])
+  const updated = await pool.query(
+    `UPDATE projects SET ${column} = $1 WHERE id = ANY($2) RETURNING id, name, tenant_id`,
+    [cleanValue, targetIds]
+  )
+
+  const fieldLabel = FIELD_LABEL[column] || column
+  const detail = `${fieldLabel} → ${cleanValue ?? '(cleared)'}`
+
+  if (updated.rows.length > BULK_LOG_THRESHOLD) {
+    await logActivity({
+      tenantId: updated.rows[0]?.tenant_id,
+      projectId: null,
+      module: 'portfolio',
+      entityType: 'project',
+      entityId: null,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: `${updated.rows.length} projects`,
+      detail,
+    })
+  } else {
+    for (const row of updated.rows) {
+      await logActivity({
+        tenantId: row.tenant_id,
+        projectId: row.id,
+        module: 'portfolio',
+        entityType: 'project',
+        entityId: row.id,
+        action: 'updated',
+        actorName: user.name,
+        actorEmail: user.email,
+        summary: row.name,
+        detail,
+      })
+    }
+  }
 
   return NextResponse.json({ success: true, count: targetIds.length })
 }
