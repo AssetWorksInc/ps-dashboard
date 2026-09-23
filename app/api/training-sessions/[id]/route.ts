@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = ['title', 'description', 'type', 'video_url', 'duration_min', 'presenter', 'tags', 'is_published']
 
@@ -54,7 +55,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       values
     )
 
-    return NextResponse.json({ session: result.rows[0] })
+    const session = result.rows[0]
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: null,
+      module: 'resource_center',
+      entityType: 'training_session',
+      entityId: session.id,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: session.title,
+      detail: session.presenter || null,
+    })
+
+    return NextResponse.json({ session })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
@@ -78,7 +94,24 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await pool.query(`DELETE FROM training_sessions WHERE id = $1`, [id])
+    const deleted = await pool.query(
+      `DELETE FROM training_sessions WHERE id = $1 RETURNING id, title, presenter`,
+      [id]
+    )
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: null,
+      module: 'resource_center',
+      entityType: 'training_session',
+      entityId: id,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: deleted.rows[0]?.title || 'Training session',
+      detail: deleted.rows[0]?.presenter || null,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
