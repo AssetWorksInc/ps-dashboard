@@ -132,6 +132,26 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
               <span style={{ fontSize: '16px' }}>🎫</span>
               <span>Tickets</span>
             </Link>
+            <Link
+              href="/management/activity"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '11px 18px',
+                fontSize: '12px',
+                fontWeight: pathname === '/management/activity' ? 600 : 400,
+                color: pathname === '/management/activity' ? '#ffffff' : '#8a9199',
+                background: pathname === '/management/activity' ? 'rgba(165,0,33,0.2)' : 'transparent',
+                borderLeft: pathname === '/management/activity' ? '3px solid #A50021' : '3px solid transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                fontFamily: 'Roboto, sans-serif'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>🕘</span>
+              <span>Activity</span>
+            </Link>
             <div style={{
               padding: '14px 18px 6px',
               fontSize: '9px',

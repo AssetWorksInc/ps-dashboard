@@ -58,6 +58,18 @@ function daysAgo(d: string | null): number | null {
 export default function ManagementDashboardPage() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [activityToday, setActivityToday] = useState<number | null>(null)
+
+  useEffect(() => {
+    // Lightweight -- the same endpoint the Activity page uses, asked for
+    // just enough rows to read back its counts.today figure.
+    fetch('/api/admin/activity?limit=1')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.counts) setActivityToday(Number(d.counts.today) || 0)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/admin/portfolio')
@@ -164,6 +176,30 @@ export default function ManagementDashboardPage() {
         {kpi('Gone quiet 90+ days', String(totals.stale.length), money(totals.stale.reduce((n, p) => n + (p.servicesBacklog || 0), 0), true) + ' idle', 'k4')}
         {kpi('Needs triage', String(totals.triage.length), totals.triage.length ? 'No engagement status yet' : 'Every project classified', 'k5')}
       </div>
+
+      <Link
+        href="/management/activity"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none',
+          background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px',
+          padding: '10px 16px', marginBottom: '14px',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Oswald, sans-serif', fontWeight: 700, fontSize: '11px', color: '#fff',
+            background: '#00538C', borderRadius: '999px', padding: '2px 10px', minWidth: '18px', textAlign: 'center',
+          }}
+        >
+          {activityToday === null ? '…' : activityToday}
+        </span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: INK }}>
+          updates today across Project Center, Portfolio, Resource Center, and Collaboration Hub
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: '11px', color: MUTED, fontFamily: 'Oswald, sans-serif', fontWeight: 700 }}>
+          View activity →
+        </span>
+      </Link>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
         <div>
