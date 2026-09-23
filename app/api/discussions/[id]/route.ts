@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 const EDITABLE_FIELDS = ['title', 'body', 'category', 'is_pinned']
 
@@ -43,7 +44,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       values
     )
 
-    return NextResponse.json({ success: true, discussion: result.rows[0] })
+    const discussion = result.rows[0]
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: discussion.project_id || null,
+      module: 'collaboration_hub',
+      entityType: 'discussion',
+      entityId: discussion.id,
+      action: 'updated',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: discussion.title,
+      detail: discussion.category || null,
+    })
+
+    return NextResponse.json({ success: true, discussion })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
@@ -60,7 +76,24 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (check === 'not_found') return NextResponse.json({ error: 'Discussion not found' }, { status: 404 })
     if (check === 'forbidden') return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
 
-    await pool.query('DELETE FROM discussions WHERE id = $1', [id])
+    const deleted = await pool.query(
+      'DELETE FROM discussions WHERE id = $1 RETURNING title, category, project_id',
+      [id]
+    )
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: deleted.rows[0]?.project_id || null,
+      module: 'collaboration_hub',
+      entityType: 'discussion',
+      entityId: id,
+      action: 'deleted',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: deleted.rows[0]?.title || 'Discussion',
+      detail: deleted.rows[0]?.category || null,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })

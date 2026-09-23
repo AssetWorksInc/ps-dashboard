@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,7 +36,22 @@ export async function POST(req: NextRequest) {
       ]
     )
 
-    return NextResponse.json({ success: true, discussion: result.rows[0] })
+    const discussion = result.rows[0]
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: discussion.project_id || null,
+      module: 'collaboration_hub',
+      entityType: 'discussion',
+      entityId: discussion.id,
+      action: 'created',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: discussion.title,
+      detail: discussion.category || null,
+    })
+
+    return NextResponse.json({ success: true, discussion })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }

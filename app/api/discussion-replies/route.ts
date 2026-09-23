@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { logActivity } from '@/lib/activityLog'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +18,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reply body is required' }, { status: 400 })
     }
 
-    const discussion = await pool.query('SELECT tenant_id FROM discussions WHERE id = $1', [discussion_id])
+    const discussion = await pool.query(
+      'SELECT tenant_id, title, project_id FROM discussions WHERE id = $1',
+      [discussion_id]
+    )
     if (discussion.rows.length === 0 || discussion.rows[0].tenant_id !== user.tenantId) {
       return NextResponse.json({ error: 'Discussion not found' }, { status: 404 })
     }
@@ -34,7 +38,23 @@ export async function POST(req: NextRequest) {
       [discussion_id]
     )
 
-    return NextResponse.json({ success: true, reply: result.rows[0] })
+    const reply = result.rows[0]
+    const preview = String(replyBody).length > 80 ? `${String(replyBody).slice(0, 80)}…` : String(replyBody)
+
+    await logActivity({
+      tenantId: user.tenantId,
+      projectId: discussion.rows[0].project_id || null,
+      module: 'collaboration_hub',
+      entityType: 'discussion_reply',
+      entityId: reply.id,
+      action: 'created',
+      actorName: user.name,
+      actorEmail: user.email,
+      summary: discussion.rows[0].title || 'Discussion',
+      detail: preview,
+    })
+
+    return NextResponse.json({ success: true, reply })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
