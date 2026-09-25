@@ -411,10 +411,19 @@ export default function Dashboard() {
                 cursor.setDate(1)
                 cursor.setHours(0, 0, 0, 0)
                 const firstYear = cursor.getFullYear()
+                // A milestone spanning many years (an old or placeholder Start Date,
+                // for instance) would otherwise get one label per month crammed along
+                // the same axis width, overlapping into an unreadable smear. Past two
+                // years of range, thin the labels out toward roughly one per quarter
+                // (or coarser) so the axis stays legible no matter how wide the range
+                // is; a typical project's month-by-month axis is untouched.
+                const totalMonths = Math.max(1, Math.round(ganttRange / (DAY_MS * 30)))
+                const monthStep = totalMonths > 24 ? Math.ceil(totalMonths / 12) : 1
+                const maxTicks = Math.min(totalMonths + 2, 240)
                 let guard = 0
-                while (cursor.getTime() <= ganttMax && guard < 60) {
+                while (cursor.getTime() <= ganttMax && guard < maxTicks) {
                   const pct = ((cursor.getTime() - ganttMin) / ganttRange) * 100
-                  if (pct >= -1) {
+                  if (pct >= -1 && guard % monthStep === 0) {
                     monthTicks.push({
                       pct: Math.min(Math.max(pct, 0), 100),
                       label: cursor.toLocaleDateString('en-US', {
