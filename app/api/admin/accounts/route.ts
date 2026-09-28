@@ -51,7 +51,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   if (user.role !== 'admin') return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
 
-  const result = await pool.query(`
+  const tenantsResult = await pool.query(`
     SELECT * FROM (
       SELECT DISTINCT ON (t.id)
         t.id, t.name, t.slug, t.tier, t.csm_name, t.cs_health, t.cs_health_note,
@@ -63,19 +63,56 @@ export async function GET() {
     ORDER BY sub.name ASC
   `)
 
-  const tenants = result.rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    slug: r.slug,
-    tier: r.tier,
-    csmName: r.csm_name,
-    csHealth: r.cs_health,
-    csHealthNote: r.cs_health_note,
-    renewal:
-      r.contract_end || r.stage || r.notes
-        ? { contractEnd: dateOnly(r.contract_end), stage: r.stage, notes: r.notes }
-        : null,
-  }))
+  // Backlog/revenue/live-work per account comes straight from the NetSuite
+  // dashboard-report snapshot, not from the app's own `projects` table --
+  // confirmed live that `projects` currently has almost no rows and every
+  // netsuite_dashboard_rows.project_id is orphaned, so the projects join
+  // Portfolio/Dashboard use finds nothing here. A dashboard row is matched
+  // to its tenant by the project label's own prefix (the segment before
+  // the first hyphen, e.g. "UUTAH-FC-P021 ..." -> "UUTAH" -> tenant
+  // "Uutah"), never by the export's client_name column, which carries the
+  // customer's full legal name and doesn't match tenants.name at all.
+  // Verified against every row on file: 0/195 matched on client_name,
+  // 195/195 matched on this label-prefix rule.
+  const workResult = await pool.query(`
+    SELECT t.id AS tenant_id, ndr.netsuite_project_label, ndr.services_backlog, ndr.services_revenue
+    FROM netsuite_dashboard_rows ndr
+    JOIN tenants t
+      ON lower(t.name) = lower(split_part(split_part(ndr.netsuite_project_label, ' ', 1), '-', 1))
+  `)
+
+  const workByTenant = new Map<string, { label: string; backlog: number; revenue: number }[]>()
+  for (const row of workResult.rows) {
+    const list = workByTenant.get(row.tenant_id) || []
+    list.push({
+      label: String(row.netsuite_project_label).split(' ')[0],
+      backlog: row.services_backlog !== null ? Number(row.services_backlog) : 0,
+      revenue: row.services_revenue !== null ? Number(row.services_revenue) : 0,
+    })
+    workByTenant.set(row.tenant_id, list)
+  }
+
+  const tenants = tenantsResult.rows.map((r) => {
+    const work = workByTenant.get(r.id) || []
+    const live = work.filter((w) => w.backlog > 0)
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      tier: r.tier,
+      csmName: r.csm_name,
+      csHealth: r.cs_health,
+      csHealthNote: r.cs_health_note,
+      renewal:
+        r.contract_end || r.stage || r.notes
+          ? { contractEnd: dateOnly(r.contract_end), stage: r.stage, notes: r.notes }
+          : null,
+      liveWork: live.map((w) => w.label),
+      totalProjectCount: work.length,
+      backlog: live.reduce((n, w) => n + w.backlog, 0),
+      revenue: work.reduce((n, w) => n + w.revenue, 0),
+    }
+  })
 
   return NextResponse.json({ tenants })
 }

@@ -1,18 +1,7 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-
-type ProjectRow = {
-  id: string
-  name: string
-  tenantId: string
-  client: string
-  pid: string | null
-  engagementStatus: string
-  servicesBacklog: number | null
-  servicesRevenue: number | null
-}
 
 type Renewal = { contractEnd: string | null; stage: string | null; notes: string | null } | null
 
@@ -25,11 +14,8 @@ type TenantRow = {
   csHealth: string | null
   csHealthNote: string | null
   renewal: Renewal
-}
-
-type AccountRow = TenantRow & {
-  liveProjects: ProjectRow[]
-  allProjects: ProjectRow[]
+  liveWork: string[]
+  totalProjectCount: number
   backlog: number
   revenue: number
 }
@@ -38,6 +24,7 @@ const RED = '#A50021'
 const INK = '#323E48'
 const MUTED = '#6B7780'
 const BORDER = '#D8DCDF'
+const LINK = '#00538C'
 
 const HEALTH_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
   GREEN: { label: 'Healthy', color: '#2E7D32', bg: '#E4F0E5', border: '#BFDCC1' },
@@ -46,13 +33,6 @@ const HEALTH_META: Record<string, { label: string; color: string; bg: string; bo
 }
 const HEALTH_ORDER = ['GREEN', 'AMBER', 'RED']
 
-const STAGE_META: Record<string, { color: string; bg: string }> = {
-  'Not started': { color: MUTED, bg: '#ECEEF0' },
-  'In progress': { color: '#00538C', bg: '#E2EDF4' },
-  'At risk': { color: RED, bg: '#F7E2E6' },
-  Renewed: { color: '#2E7D32', bg: '#E4F0E5' },
-  Lost: { color: MUTED, bg: '#ECEEF0' },
-}
 const STAGE_ORDER = ['Not started', 'In progress', 'At risk', 'Renewed', 'Lost']
 
 function money(n: number | null | undefined, compact?: boolean): string {
@@ -76,52 +56,30 @@ function daysUntil(d: string | null): number | null {
 }
 
 export default function AccountsPage() {
-  const [projects, setProjects] = useState<ProjectRow[] | null>(null)
   const [tenants, setTenants] = useState<TenantRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [csm, setCsm] = useState('')
   const [scope, setScope] = useState<'live' | 'all' | 'scored'>('live')
-  const [sortKey, setSortKey] = useState<'name' | 'backlog' | 'renewal'>('backlog')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/admin/portfolio').then((r) => {
+    fetch('/api/admin/accounts')
+      .then((r) => {
         if (r.status === 401 || r.status === 403) throw new Error('auth')
         if (!r.ok) throw new Error('load')
         return r.json()
-      }),
-      fetch('/api/admin/accounts').then((r) => {
-        if (r.status === 401 || r.status === 403) throw new Error('auth')
-        if (!r.ok) throw new Error('load')
-        return r.json()
-      }),
-    ])
-      .then(([portfolioData, accountsData]) => {
-        setProjects(portfolioData.projects)
-        setTenants(accountsData.tenants)
       })
+      .then((data) => setTenants(data.tenants))
       .catch((e) => {
         setError(e.message === 'auth' ? 'This page is for AssetWorks PM and admin accounts only.' : 'Could not load accounts.')
       })
   }, [])
 
-  async function saveField(id: string, field: string, value: string, patch: Partial<AccountRow>) {
+  async function saveField(id: string, field: string, value: string, patch: Partial<TenantRow>) {
     setSaving((s) => ({ ...s, [id]: true }))
-    setTenants((prev) =>
-      prev &&
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              ...(patch as Partial<TenantRow>),
-            }
-          : t
-      )
-    )
+    setTenants((prev) => prev && prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
     try {
       await fetch('/api/admin/accounts', {
         method: 'PATCH',
@@ -139,312 +97,193 @@ export default function AccountsPage() {
     return Array.from(set).sort()
   }, [tenants])
 
-  const accounts: AccountRow[] = useMemo(() => {
-    const projectList = projects || []
-    return (tenants || []).map((t) => {
-      const allProjects = projectList.filter((p) => p.tenantId === t.id)
-      const liveProjects = allProjects.filter((p) => (p.servicesBacklog || 0) > 0)
-      return {
-        ...t,
-        allProjects,
-        liveProjects,
-        backlog: liveProjects.reduce((n, p) => n + (p.servicesBacklog || 0), 0),
-        revenue: allProjects.reduce((n, p) => n + (p.servicesRevenue || 0), 0),
-      }
-    })
-  }, [tenants, projects])
-
-  const totals = useMemo(() => {
-    const live = accounts.filter((a) => a.liveProjects.length > 0)
-    const byHealth: Record<string, { count: number; backlog: number }> = {}
-    HEALTH_ORDER.forEach((k) => (byHealth[k] = { count: 0, backlog: 0 }))
-    live.forEach((a) => {
-      if (a.csHealth && byHealth[a.csHealth]) {
-        byHealth[a.csHealth].count += 1
-        byHealth[a.csHealth].backlog += a.backlog
-      }
-    })
-    const unassigned = accounts.filter((a) => a.liveProjects.length > 0 && !a.csmName)
-    const dueSoon = accounts
-      .filter((a) => {
-        const d = daysUntil(a.renewal?.contractEnd || null)
-        return d !== null && d >= 0 && d <= 90 && a.renewal?.stage !== 'Renewed' && a.renewal?.stage !== 'Lost'
-      })
-      .sort((a, b) => (daysUntil(a.renewal?.contractEnd || null) || 0) - (daysUntil(b.renewal?.contractEnd || null) || 0))
-    return {
-      liveCount: live.length,
-      liveBacklog: live.reduce((n, a) => n + a.backlog, 0),
-      byHealth,
-      unassigned,
-      dueSoon,
-    }
-  }, [accounts])
-
   const filteredSorted = useMemo(() => {
-    let list = accounts.filter((a) => {
-      if (scope === 'live' && a.liveProjects.length === 0) return false
-      if (scope === 'scored' && !a.csHealth) return false
-      if (csm && a.csmName !== csm) return false
+    let list = (tenants || []).filter((t) => {
+      if (scope === 'live' && t.liveWork.length === 0) return false
+      if (scope === 'scored' && !t.csHealth) return false
+      if (csm && t.csmName !== csm) return false
       if (q.trim()) {
-        const hay = [a.name, a.csmName, a.csHealthNote, ...a.allProjects.map((p) => p.name)]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
+        const hay = [t.name, t.csmName, t.csHealthNote, ...t.liveWork].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q.trim().toLowerCase())) return false
       }
       return true
     })
-    const dir = sortDir === 'asc' ? 1 : -1
-    list = list.slice().sort((a, b) => {
-      let av: string | number = 0
-      let bv: string | number = 0
-      if (sortKey === 'name') {
-        av = a.name.toLowerCase()
-        bv = b.name.toLowerCase()
-      } else if (sortKey === 'backlog') {
-        av = a.backlog
-        bv = b.backlog
-      } else if (sortKey === 'renewal') {
-        av = daysUntil(a.renewal?.contractEnd || null) ?? 999999
-        bv = daysUntil(b.renewal?.contractEnd || null) ?? 999999
-      }
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir
-      return String(av).localeCompare(String(bv)) * dir
-    })
+    list = list.slice().sort((a, b) => b.backlog - a.backlog)
     return list
-  }, [accounts, q, csm, scope, sortKey, sortDir])
-
-  function toggleSort(key: typeof sortKey) {
-    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-    else {
-      setSortKey(key)
-      setSortDir(key === 'name' ? 'asc' : key === 'renewal' ? 'asc' : 'desc')
-    }
-  }
+  }, [tenants, q, csm, scope])
 
   if (error) {
     return (
       <div style={{ padding: '40px', fontFamily: 'Roboto, sans-serif', color: INK }}>
         <p>{error}</p>
-        <Link href="/" style={{ color: '#00538C', fontSize: '13px' }}>← Back to Dashboard</Link>
+        <Link href="/" style={{ color: LINK, fontSize: '13px' }}>← Back to Dashboard</Link>
       </div>
     )
   }
 
-  if (!tenants || !projects) {
+  if (!tenants) {
     return <div style={{ padding: '40px', fontFamily: 'Roboto, sans-serif', color: MUTED }}>Loading accounts…</div>
   }
-
-  const kpi = (label: string, value: string, note: string, key: string) => (
-    <div key={key} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderLeft: `4px solid ${RED}`, borderRadius: '8px', padding: '14px 16px' }}>
-      <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '.6px', fontSize: '10px', color: MUTED }}>{label}</div>
-      <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: '22px', color: INK }}>{value}</div>
-      <div style={{ fontSize: '11px', color: MUTED }}>{note}</div>
-    </div>
-  )
 
   return (
     <div style={{ fontFamily: 'Roboto, sans-serif', padding: '28px', maxWidth: '1500px', margin: '0 auto' }}>
       <div style={{ fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '10.5px', color: RED, marginBottom: '2px' }}>
-        Book of business · admin / PM only
+        Book of business
       </div>
       <h1 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '20px', fontWeight: 600, color: INK, margin: '0 0 4px' }}>Accounts</h1>
-      <p style={{ fontSize: '12px', color: MUTED, marginTop: 0, marginBottom: '16px' }}>
-        {totals.liveCount} accounts with live backlog · {money(totals.liveBacklog)} total
+      <p style={{ fontSize: '12.5px', color: MUTED, marginTop: 0, marginBottom: '18px' }}>
+        Every client the export names, largest backlog first, with whatever the customer success team has recorded so far.
       </p>
-      <div style={{ borderLeft: `3px solid ${RED}`, background: '#FBEFF1', padding: '8px 12px', borderRadius: '4px', fontSize: '11.5px', color: '#3a4650', marginBottom: '18px' }}>
-        CSM and CS Health are set by a person, the same way Engagement Status works on Portfolio. Backlog and Revenue are pulled from the same project data as Portfolio.
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: '12px', marginBottom: '20px' }}>
-        {kpi('Live backlog', money(totals.liveBacklog, true), `${totals.liveCount} accounts with open backlog`, 'k1')}
-        {kpi('Healthy', String(totals.byHealth.GREEN.count), money(totals.byHealth.GREEN.backlog, true) + ' backlog', 'k2')}
-        {kpi('At risk / critical', String(totals.byHealth.AMBER.count + totals.byHealth.RED.count), money(totals.byHealth.AMBER.backlog + totals.byHealth.RED.backlog, true) + ' backlog', 'k3')}
-        {kpi('No CSM assigned', String(totals.unassigned.length), totals.unassigned.length ? 'needs an owner' : 'every live account is covered', 'k4')}
-        {kpi('Renewals due 90 days', String(totals.dueSoon.length), totals.dueSoon.length ? totals.dueSoon[0].name + ' next' : 'nothing coming due', 'k5')}
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
-        <input
-          type="search"
-          placeholder="Filter by account, CSM or project"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          style={{ fontSize: '12px', padding: '6px 9px', border: `1px solid ${BORDER}`, borderRadius: '6px', minWidth: '260px' }}
-        />
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '18px' }}>
+        <select value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} style={{ fontSize: '12px', padding: '6px 9px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}>
+          <option value="live">Clients with live work</option>
+          <option value="all">All accounts</option>
+          <option value="scored">Scored only</option>
+        </select>
         <select value={csm} onChange={(e) => setCsm(e.target.value)} style={{ fontSize: '12px', padding: '6px 9px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}>
-          <option value="">All CSMs</option>
+          <option value="">All customer success managers</option>
           {csms.map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}
         </select>
-        <select value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} style={{ fontSize: '12px', padding: '6px 9px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}>
-          <option value="live">Live accounts only</option>
-          <option value="all">All accounts</option>
-          <option value="scored">Health scored only</option>
-        </select>
-        <span style={{ fontSize: '11px', color: MUTED }}>{filteredSorted.length} of {accounts.length}</span>
+        <input
+          type="search"
+          placeholder="Filter accounts"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ fontSize: '12px', padding: '6px 9px', border: `1px solid ${BORDER}`, borderRadius: '6px', minWidth: '220px' }}
+        />
+        <span style={{ fontSize: '11.5px', color: MUTED, marginLeft: 'auto' }}>{filteredSorted.length} accounts</span>
       </div>
 
-      <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '8px 0 16px', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-          <thead>
-            <tr>
-              {[
-                { key: null, label: 'Health' },
-                { key: 'name', label: 'Account' },
-                { key: null, label: 'CSM' },
-                { key: null, label: 'Live work' },
-                { key: 'backlog', label: 'Backlog' },
-                { key: null, label: 'Revenue ITD' },
-                { key: 'renewal', label: 'Renewal' },
-                { key: null, label: '' },
-              ].map((c, i) => (
-                <th
-                  key={i}
-                  onClick={c.key ? () => toggleSort(c.key as any) : undefined}
-                  style={{ background: INK, color: '#fff', fontFamily: 'Oswald, sans-serif', fontWeight: 500, textAlign: 'left', padding: '7px 9px', whiteSpace: 'nowrap', cursor: c.key ? 'pointer' : 'default' }}
+      {filteredSorted.length === 0 && (
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '26px', textAlign: 'center', color: MUTED, fontSize: '12.5px' }}>
+          Nothing matches those filters.
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
+        {filteredSorted.map((t) => {
+          const meta = t.csHealth ? HEALTH_META[t.csHealth] : null
+          const isExpanded = !!expanded[t.id]
+          const daysToEnd = daysUntil(t.renewal?.contractEnd || null)
+          return (
+            <div key={t.id} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: meta ? meta.color : '#B7BEC4', flexShrink: 0 }} />
+                  <button
+                    onClick={() => setExpanded((e) => ({ ...e, [t.id]: !e[t.id] }))}
+                    style={{ fontSize: '14px', fontWeight: 700, color: LINK, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {t.name}
+                  </button>
+                </div>
+                <select
+                  value={t.csHealth || ''}
+                  onChange={(e) => saveField(t.id, 'cs_health', e.target.value, { csHealth: e.target.value || null })}
+                  style={{
+                    fontFamily: 'Oswald, sans-serif',
+                    fontSize: '9.5px',
+                    textTransform: 'uppercase',
+                    borderRadius: '999px',
+                    padding: '2px 7px',
+                    border: `1px solid ${meta ? meta.border : BORDER}`,
+                    background: meta ? meta.bg : '#F4F5F6',
+                    color: meta ? meta.color : MUTED,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
                 >
-                  {c.label}{sortKey === c.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSorted.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: '26px', textAlign: 'center', color: MUTED }}>Nothing matches those filters.</td></tr>
-            )}
-            {filteredSorted.map((a) => {
-              const meta = a.csHealth ? HEALTH_META[a.csHealth] : null
-              const isExpanded = !!expanded[a.id]
-              const daysToEnd = daysUntil(a.renewal?.contractEnd || null)
-              const shownProjects = a.liveProjects.slice(0, 3)
-              const moreCount = a.liveProjects.length - shownProjects.length
-              return (
-                <Fragment key={a.id}>
-                  <tr id={'row-' + a.id}>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      <select
-                        value={a.csHealth || ''}
-                        onChange={(e) => saveField(a.id, 'cs_health', e.target.value, { csHealth: e.target.value || null })}
-                        style={{
-                          fontFamily: 'Oswald, sans-serif',
-                          fontSize: '10px',
-                          textTransform: 'uppercase',
-                          borderRadius: '999px',
-                          padding: '2px 7px',
-                          border: `1px solid ${meta ? meta.border : BORDER}`,
-                          background: meta ? meta.bg : '#F4F5F6',
-                          color: meta ? meta.color : MUTED,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <option value="">Not scored</option>
-                        {HEALTH_ORDER.map((k) => (
-                          <option key={k} value={k}>{HEALTH_META[k].label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'top' }}>
-                      <div style={{ fontWeight: 700, color: INK }}>{a.name}</div>
-                      {a.tier && <div style={{ fontSize: '10.5px', color: MUTED }}>{a.tier}</div>}
-                    </td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      {a.csmName || <span style={{ color: MUTED }}>unassigned</span>}
-                    </td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      {a.liveProjects.length === 0 ? (
-                        <span style={{ color: MUTED, fontSize: '11px' }}>none</span>
-                      ) : (
-                        <>
-                          {shownProjects.map((p) => (
-                            <span key={p.id} style={{ display: 'inline-block', fontSize: '10.5px', background: '#ECEEF0', color: INK, borderRadius: '999px', padding: '2px 8px', margin: '0 4px 4px 0' }}>
-                              {p.name}
-                            </span>
-                          ))}
-                          {moreCount > 0 && <span style={{ fontSize: '10.5px', color: MUTED }}>+{moreCount} more</span>}
-                        </>
-                      )}
-                    </td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' }}>{money(a.backlog)}</td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right', color: MUTED }}>{money(a.revenue)}</td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      {a.renewal?.contractEnd ? (
-                        <>
-                          {shortDate(a.renewal.contractEnd)}
-                          <div style={{ fontSize: '10px', color: daysToEnd !== null && daysToEnd <= 90 && daysToEnd >= 0 ? RED : MUTED }}>
-                            {a.renewal.stage || 'Not started'}{daysToEnd !== null ? ' · ' + (daysToEnd >= 0 ? daysToEnd + 'd' : Math.abs(daysToEnd) + 'd ago') : ''}
-                          </div>
-                        </>
-                      ) : (
-                        <span style={{ color: MUTED }}>not tracked</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' }}>
-                      <button
-                        onClick={() => setExpanded((e) => ({ ...e, [a.id]: !e[a.id] }))}
-                        style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10.5px', fontWeight: 700, border: `1px solid ${RED}`, background: isExpanded ? RED : '#fff', color: isExpanded ? '#fff' : RED, borderRadius: '6px', padding: '3px 10px', cursor: 'pointer' }}
-                      >
-                        {isExpanded ? 'Hide' : 'Edit'}
-                      </button>
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr style={{ background: '#FAFBFC' }}>
-                      <td colSpan={8} style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
-                          <EditField label="CSM" value={a.csmName} onSave={(v) => saveField(a.id, 'csm_name', v, { csmName: v || null })} placeholder="Who owns this relationship" />
-                          <div>
-                            <label style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.6px', color: MUTED, fontFamily: 'Oswald, sans-serif', marginBottom: '3px' }}>Renewal stage</label>
-                            <select
-                              value={a.renewal?.stage || 'Not started'}
-                              onChange={(e) => saveField(a.id, 'renewal_stage', e.target.value, { renewal: { contractEnd: a.renewal?.contractEnd || null, stage: e.target.value, notes: a.renewal?.notes || null } })}
-                              style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}
-                            >
-                              {STAGE_ORDER.map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <EditField
-                            label="Contract end date"
-                            value={a.renewal?.contractEnd || null}
-                            type="date"
-                            onSave={(v) => saveField(a.id, 'renewal_contract_end', v, { renewal: { contractEnd: v || null, stage: a.renewal?.stage || null, notes: a.renewal?.notes || null } })}
-                          />
-                          <div style={{ gridColumn: '1/-1' }}>
-                            <EditField
-                              label="CS health note"
-                              value={a.csHealthNote}
-                              onSave={(v) => saveField(a.id, 'cs_health_note', v, { csHealthNote: v || null })}
-                              textarea
-                              placeholder="Why this account is scored the way it is, and what would move it"
-                            />
-                          </div>
-                          <div style={{ gridColumn: '1/-1' }}>
-                            <EditField
-                              label="Renewal notes"
-                              value={a.renewal?.notes || null}
-                              onSave={(v) => saveField(a.id, 'renewal_notes', v, { renewal: { contractEnd: a.renewal?.contractEnd || null, stage: a.renewal?.stage || null, notes: v || null } })}
-                              textarea
-                              placeholder="Where the renewal conversation stands"
-                            />
-                          </div>
-                        </div>
-                        {a.allProjects.length > 0 && (
-                          <p style={{ fontSize: '10.5px', color: MUTED, marginTop: '10px' }}>
-                            {a.allProjects.length} total project{a.allProjects.length === 1 ? '' : 's'} on file, {a.liveProjects.length} with open backlog.
-                          </p>
-                        )}
-                        {saving[a.id] && <span style={{ fontSize: '10.5px', color: MUTED }}>Saving…</span>}
-                      </td>
-                    </tr>
+                  <option value="">Not scored</option>
+                  {HEALTH_ORDER.map((k) => (
+                    <option key={k} value={k}>{HEALTH_META[k].label}</option>
+                  ))}
+                </select>
+              </div>
+              {t.tier && <div style={{ fontSize: '11px', color: MUTED, marginTop: '2px', marginLeft: '17px' }}>{t.tier}</div>}
+
+              <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: '10px', paddingTop: '10px', display: 'grid', gap: '6px', fontSize: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
+                  <span style={{ color: MUTED }}>CSM</span>
+                  <span>{t.csmName || <span style={{ color: MUTED }}>unassigned</span>}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
+                  <span style={{ color: MUTED }}>Live work</span>
+                  <span style={{ color: t.liveWork.length ? LINK : MUTED }}>{t.liveWork.length ? t.liveWork.join(', ') : 'none'}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
+                  <span style={{ color: MUTED }}>Backlog</span>
+                  <span style={{ fontWeight: 700 }}>{money(t.backlog)}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
+                  <span style={{ color: MUTED }}>Revenue ITD</span>
+                  <span>{money(t.revenue)}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
+                  <span style={{ color: MUTED }}>Renewal</span>
+                  <span>
+                    {t.renewal?.contractEnd ? (
+                      <>
+                        {shortDate(t.renewal.contractEnd)}{' '}
+                        <span style={{ color: daysToEnd !== null && daysToEnd <= 90 && daysToEnd >= 0 ? RED : MUTED }}>
+                          {t.renewal.stage || 'Not started'}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: MUTED }}>not tracked</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${BORDER}`, display: 'grid', gap: '10px' }}>
+                  <EditField label="CSM" value={t.csmName} onSave={(v) => saveField(t.id, 'csm_name', v, { csmName: v || null })} placeholder="Who owns this relationship" />
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.6px', color: MUTED, fontFamily: 'Oswald, sans-serif', marginBottom: '3px' }}>Renewal stage</label>
+                    <select
+                      value={t.renewal?.stage || 'Not started'}
+                      onChange={(e) => saveField(t.id, 'renewal_stage', e.target.value, { renewal: { contractEnd: t.renewal?.contractEnd || null, stage: e.target.value, notes: t.renewal?.notes || null } })}
+                      style={{ width: '100%', fontSize: '12px', padding: '6px 8px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}
+                    >
+                      {STAGE_ORDER.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <EditField
+                    label="Contract end date"
+                    value={t.renewal?.contractEnd || null}
+                    type="date"
+                    onSave={(v) => saveField(t.id, 'renewal_contract_end', v, { renewal: { contractEnd: v || null, stage: t.renewal?.stage || null, notes: t.renewal?.notes || null } })}
+                  />
+                  <EditField
+                    label="CS health note"
+                    value={t.csHealthNote}
+                    onSave={(v) => saveField(t.id, 'cs_health_note', v, { csHealthNote: v || null })}
+                    textarea
+                    placeholder="Why this account is scored the way it is, and what would move it"
+                  />
+                  <EditField
+                    label="Renewal notes"
+                    value={t.renewal?.notes || null}
+                    onSave={(v) => saveField(t.id, 'renewal_notes', v, { renewal: { contractEnd: t.renewal?.contractEnd || null, stage: t.renewal?.stage || null, notes: v || null } })}
+                    textarea
+                    placeholder="Where the renewal conversation stands"
+                  />
+                  {t.totalProjectCount > 0 && (
+                    <p style={{ fontSize: '10.5px', color: MUTED, margin: 0 }}>
+                      {t.totalProjectCount} total project{t.totalProjectCount === 1 ? '' : 's'} on file, {t.liveWork.length} with open backlog.
+                    </p>
                   )}
-                </Fragment>
-              )
-            })}
-          </tbody>
-        </table>
+                  {saving[t.id] && <span style={{ fontSize: '10.5px', color: MUTED }}>Saving…</span>}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
