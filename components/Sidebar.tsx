@@ -113,6 +113,26 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
               <span>Portfolio</span>
             </Link>
             <Link
+              href="/management/accounts"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '11px 18px',
+                fontSize: '12px',
+                fontWeight: pathname === '/management/accounts' ? 600 : 400,
+                color: pathname === '/management/accounts' ? '#ffffff' : '#8a9199',
+                background: pathname === '/management/accounts' ? 'rgba(165,0,33,0.2)' : 'transparent',
+                borderLeft: pathname === '/management/accounts' ? '3px solid #A50021' : '3px solid transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                fontFamily: 'Roboto, sans-serif'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>🏷️</span>
+              <span>Accounts</span>
+            </Link>
+            <Link
               href="/management/tickets"
               style={{
                 display: 'flex',

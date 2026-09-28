@@ -18,6 +18,7 @@ export type ActivityModule =
   | 'resource_center'
   | 'collaboration_hub'
   | 'netsuite_import'
+  | 'accounts'
 
 export type ActivityEntry = {
   tenantId?: string | null
