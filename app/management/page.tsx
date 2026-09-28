@@ -261,24 +261,52 @@ export default function ManagementDashboardPage() {
         <div>
           <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '16px 18px', marginBottom: '14px' }}>
             <h2 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '13.5px', margin: '0 0 10px' }}>Backlog by engagement status</h2>
-            <div style={{ display: 'flex', height: '28px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-              {STATUS_ORDER.map((k) => {
-                const pct = totals.backlog ? (totals.byStatus[k].backlog / totals.backlog) * 100 : 0
-                if (pct <= 0) return null
-                return <div key={k} title={STATUS_META[k].label} style={{ width: pct + '%', background: STATUS_META[k].color }} />
-              })}
+            <div style={{ display: 'flex', gap: '18px', alignItems: 'center' }}>
+              <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                <circle cx="60" cy="60" r="47" fill="none" stroke="#EAECEE" strokeWidth="17" />
+                {(() => {
+                  const r = 47
+                  const circumference = 2 * Math.PI * r
+                  let offset = 0
+                  return STATUS_ORDER.map((k) => {
+                    const pct = totals.backlog ? totals.byStatus[k].backlog / totals.backlog : 0
+                    if (pct <= 0) return null
+                    const dash = pct * circumference
+                    const seg = (
+                      <circle
+                        key={k}
+                        cx="60" cy="60" r={r}
+                        fill="none"
+                        stroke={STATUS_META[k].color}
+                        strokeWidth="17"
+                        strokeDasharray={`${dash} ${circumference - dash}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 60 60)"
+                      />
+                    )
+                    offset += dash
+                    return seg
+                  })
+                })()}
+                <text x="60" y="57" textAnchor="middle" style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 700, fontSize: '19px', fill: INK }}>
+                  {totals.count}
+                </text>
+                <text x="60" y="72" textAnchor="middle" style={{ fontFamily: 'Oswald, sans-serif', fontSize: '8.5px', fill: MUTED, letterSpacing: '.4px' }}>
+                  PROJECTS
+                </text>
+              </svg>
+              <div style={{ display: 'grid', gap: '1px', flex: 1, minWidth: 0 }}>
+                {STATUS_ORDER.filter((k) => totals.byStatus[k].count > 0).map((k) => (
+                  <div key={k} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', gap: '8px', alignItems: 'center', padding: '3px 2px', fontSize: '11px' }}>
+                    <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: STATUS_META[k].color, display: 'inline-block' }} />
+                    <span>{STATUS_META[k].label}</span>
+                    <span style={{ color: MUTED }}>{totals.byStatus[k].count}</span>
+                    <span style={{ color: MUTED }}>{money(totals.byStatus[k].backlog)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'grid', gap: '1px', marginTop: '10px' }}>
-              {STATUS_ORDER.filter((k) => totals.byStatus[k].count > 0).map((k) => (
-                <div key={k} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', gap: '8px', alignItems: 'center', padding: '3px 2px', fontSize: '11px' }}>
-                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: STATUS_META[k].color, display: 'inline-block' }} />
-                  <span>{STATUS_META[k].label}</span>
-                  <span style={{ color: MUTED }}>{totals.byStatus[k].count}</span>
-                  <span style={{ color: MUTED }}>{money(totals.byStatus[k].backlog)}</span>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: '10.5px', color: MUTED, marginTop: '8px' }}>
+            <p style={{ fontSize: '10.5px', color: MUTED, marginTop: '10px' }}>
               Status is set by a person. The signal beside each project is calculated from the data — the two are meant to be compared, not merged.
             </p>
           </div>
