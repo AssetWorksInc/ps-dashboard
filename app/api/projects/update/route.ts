@@ -6,7 +6,27 @@ import { logActivity } from '@/lib/activityLog'
 export async function PATCH(req: Request) {
   try {
     const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+    }
+
     const { id, health, status, start_date, end_date } = await req.json()
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'id is required' }, { status: 400 })
+    }
+
+    // Customers can edit their own project's Health/Status/dates from the
+    // Overview tab's "Update Project" panel (an intentional exception to the
+    // admin-only rule most other project fields follow — see the 9/9
+    // changelog entry), but only for a project under their own tenant.
+    // Admins can edit any project. Checked here rather than trusted from the
+    // client, since `id` is just a value in the request body.
+    if (user.role !== 'admin') {
+      const owned = await pool.query('SELECT id FROM projects WHERE id = $1 AND tenant_id = $2', [id, user.tenantId])
+      if (owned.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      }
+    }
 
     const updated = await pool.query(
       `UPDATE projects
@@ -28,8 +48,8 @@ export async function PATCH(req: Request) {
       entityType: 'project',
       entityId: id,
       action: 'updated',
-      actorName: user?.name,
-      actorEmail: user?.email,
+      actorName: user.name,
+      actorEmail: user.email,
       summary: proj?.name || 'Project',
       detail: [
         health ? `Health: ${health}` : null,
@@ -61,8 +81,8 @@ export async function PATCH(req: Request) {
           entityType: 'milestone',
           entityId: milestone.rows[0].id,
           action: 'created',
-          actorName: user?.name,
-          actorEmail: user?.email,
+          actorName: user.name,
+          actorEmail: user.email,
           summary: milestone.rows[0].title,
           detail: 'Auto-created from project start/end dates',
         })
