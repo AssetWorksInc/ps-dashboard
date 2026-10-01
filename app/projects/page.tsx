@@ -77,6 +77,16 @@ export default function ProjectCenter() {
   const [sopDocTitle, setSopDocTitle] = useState('')
   const [sopDocFile, setSopDocFile] = useState<File | null>(null)
   const [uploadingSopDoc, setUploadingSopDoc] = useState(false)
+  const [sopDocMode, setSopDocMode] = useState<'file' | 'link'>('file')
+  const [sopDocUrl, setSopDocUrl] = useState('')
+  // Status Reports section state (PDF upload or URL link, each with a date stamp)
+  const [addingStatusReport, setAddingStatusReport] = useState(false)
+  const [statusReportTitle, setStatusReportTitle] = useState('')
+  const [statusReportMode, setStatusReportMode] = useState<'file' | 'link'>('file')
+  const [statusReportFile, setStatusReportFile] = useState<File | null>(null)
+  const [statusReportUrl, setStatusReportUrl] = useState('')
+  const [statusReportDate, setStatusReportDate] = useState('')
+  const [uploadingStatusReport, setUploadingStatusReport] = useState(false)
   // Schedule tab state
   const [addingAppt, setAddingAppt] = useState(false)
   const [newAppt, setNewAppt] = useState({ title: '', session_type: '', consultant: '', scheduled_at: '', location: '', notes: '' })
@@ -197,11 +207,12 @@ export default function ProjectCenter() {
   const sopCompleteCount = sopItems.filter((s: any) => s.status === 'complete').length
   const sopPct = sopItems.length > 0 ? Math.round((sopCompleteCount / sopItems.length) * 100) : 0
   const sopDocuments = data?.documents?.filter((d: any) => d.project_id === selectedProject?.id && d.category === 'SOP') || []
+  const statusReports = data?.documents?.filter((d: any) => d.project_id === selectedProject?.id && d.category === 'StatusReport') || []
   const meetingNotes = data?.meetingNotes?.filter((m: any) => m.project_id === selectedProject?.id) || []
   const statusColor = (s: string) => s === 'green' ? '#2E7D32' : s === 'yellow' ? '#8a6400' : s === 'red' ? '#A50021' : '#8a9199'
   const statusBg = (s: string) => s === 'green' ? '#E7F3E8' : s === 'yellow' ? '#FDF3DC' : s === 'red' ? '#FBE7EA' : '#F4F5F6'
   const statusLabel = (s: string) => s === 'green' ? 'On Track' : s === 'yellow' ? 'At Risk' : s === 'red' ? 'Critical' : 'N/A'
-  const docIcon = (t: string) => t === 'pdf' ? '📄' : (t === 'doc' || t === 'docx') ? '📝' : (t === 'xls' || t === 'xlsx') ? '📊' : (t === 'ppt' || t === 'pptx') ? '📈' : '📁'
+  const docIcon = (t: string) => t === 'pdf' ? '📄' : (t === 'doc' || t === 'docx') ? '📝' : (t === 'xls' || t === 'xlsx') ? '📊' : (t === 'ppt' || t === 'pptx') ? '📈' : t === 'link' ? '🔗' : '📁'
   const hoursTotal = Number(selectedProject?.budget_hours_total) || 0
   // Only line items a person actually drove -- hand-added, or a NetSuite-mirrored
   // row someone has edited -- count toward "there's real manual data here." An
@@ -435,6 +446,33 @@ export default function ProjectCenter() {
     if (result.success) await loadProjects()
   }
   async function uploadSopDocument() {
+    if (sopDocMode === 'link') {
+      if (!sopDocUrl.trim()) return
+      setUploadingSopDoc(true)
+      try {
+        const res = await fetch('/api/documents/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: sopDocTitle || sopDocUrl,
+            url: sopDocUrl,
+            category: 'SOP',
+            project_id: selectedProject.id,
+          }),
+        })
+        const result = await res.json()
+        if (result.success) {
+          await loadProjects()
+          setAddingSopDoc(false)
+          setSopDocTitle('')
+          setSopDocUrl('')
+          setSopDocMode('file')
+        }
+      } finally {
+        setUploadingSopDoc(false)
+      }
+      return
+    }
     if (!sopDocFile) return
     setUploadingSopDoc(true)
     try {
@@ -453,6 +491,58 @@ export default function ProjectCenter() {
       }
     } finally {
       setUploadingSopDoc(false)
+    }
+  }
+  async function createStatusReport() {
+    if (statusReportMode === 'link') {
+      if (!statusReportUrl.trim()) return
+      setUploadingStatusReport(true)
+      try {
+        const res = await fetch('/api/documents/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: statusReportTitle || statusReportUrl,
+            url: statusReportUrl,
+            category: 'StatusReport',
+            project_id: selectedProject.id,
+            report_date: statusReportDate || null,
+          }),
+        })
+        const result = await res.json()
+        if (result.success) {
+          await loadProjects()
+          setAddingStatusReport(false)
+          setStatusReportTitle('')
+          setStatusReportUrl('')
+          setStatusReportDate('')
+          setStatusReportMode('file')
+        }
+      } finally {
+        setUploadingStatusReport(false)
+      }
+      return
+    }
+    if (!statusReportFile) return
+    setUploadingStatusReport(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', statusReportFile)
+      formData.append('title', statusReportTitle || statusReportFile.name)
+      formData.append('category', 'StatusReport')
+      formData.append('project_id', selectedProject.id)
+      if (statusReportDate) formData.append('report_date', statusReportDate)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const result = await res.json()
+      if (result.success) {
+        await loadProjects()
+        setAddingStatusReport(false)
+        setStatusReportTitle('')
+        setStatusReportFile(null)
+        setStatusReportDate('')
+      }
+    } finally {
+      setUploadingStatusReport(false)
     }
   }
   async function deleteSopDocument(id: string) {
@@ -2233,27 +2323,50 @@ export default function ProjectCenter() {
                       </div>
                       {addingSopDoc && (
                         <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => setSopDocMode('file')}
+                              style={{ padding: '5px 10px', background: sopDocMode === 'file' ? '#323E48' : '#fff', color: sopDocMode === 'file' ? '#fff' : '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Upload File
+                            </button>
+                            <button
+                              onClick={() => setSopDocMode('link')}
+                              style={{ padding: '5px 10px', background: sopDocMode === 'link' ? '#323E48' : '#fff', color: sopDocMode === 'link' ? '#fff' : '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Add Link
+                            </button>
+                          </div>
                           <input
                             placeholder="Document title (optional — defaults to filename)"
                             value={sopDocTitle}
                             onChange={e => setSopDocTitle(e.target.value)}
                             style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
                           />
-                          <input
-                            type="file"
-                            onChange={e => setSopDocFile(e.target.files?.[0] || null)}
-                            style={{ fontSize: '12px' }}
-                          />
+                          {sopDocMode === 'file' ? (
+                            <input
+                              type="file"
+                              onChange={e => setSopDocFile(e.target.files?.[0] || null)}
+                              style={{ fontSize: '12px' }}
+                            />
+                          ) : (
+                            <input
+                              placeholder="https://..."
+                              value={sopDocUrl}
+                              onChange={e => setSopDocUrl(e.target.value)}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                          )}
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               onClick={uploadSopDocument}
-                              disabled={!sopDocFile || uploadingSopDoc}
-                              style={{ padding: '7px 14px', background: (!sopDocFile || uploadingSopDoc) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: (!sopDocFile || uploadingSopDoc) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                              disabled={(sopDocMode === 'file' ? !sopDocFile : !sopDocUrl.trim()) || uploadingSopDoc}
+                              style={{ padding: '7px 14px', background: ((sopDocMode === 'file' ? !sopDocFile : !sopDocUrl.trim()) || uploadingSopDoc) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: ((sopDocMode === 'file' ? !sopDocFile : !sopDocUrl.trim()) || uploadingSopDoc) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
                             >
-                              {uploadingSopDoc ? 'Uploading...' : 'Upload'}
+                              {uploadingSopDoc ? (sopDocMode === 'file' ? 'Uploading...' : 'Saving...') : (sopDocMode === 'file' ? 'Upload' : 'Save Link')}
                             </button>
                             <button
-                              onClick={() => { setAddingSopDoc(false); setSopDocTitle(''); setSopDocFile(null) }}
+                              onClick={() => { setAddingSopDoc(false); setSopDocTitle(''); setSopDocFile(null); setSopDocUrl(''); setSopDocMode('file') }}
                               style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                             >
                               Cancel
@@ -2274,12 +2387,150 @@ export default function ProjectCenter() {
                               Uploaded by {d.uploaded_by} · {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </p>
                           </div>
-                          <a
-                            href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop() || '')}`}
-                            style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                          {d.file_type === 'link' ? (
+                            <a
+                              href={d.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              Open Link
+                            </a>
+                          ) : (
+                            <a
+                              href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop() || '')}`}
+                              style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              Download
+                            </a>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={() => deleteSopDocument(d.id)}
+                              style={{ padding: '6px 10px', background: '#fff', color: '#A50021', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Status Reports */}
+                    <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #EAECEE' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.5px', color: '#A50021', margin: 0 }}>
+                          Status Reports
+                        </h3>
+                        {isAdmin && !addingStatusReport && (
+                          <button
+                            onClick={() => setAddingStatusReport(true)}
+                            style={{ background: 'none', border: '1px solid #CCCCCC', color: '#323E48', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '4px 10px' }}
                           >
-                            Download
-                          </a>
+                            + Add Status Report
+                          </button>
+                        )}
+                      </div>
+                      {addingStatusReport && (
+                        <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '12px', marginBottom: '12px', display: 'grid', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => setStatusReportMode('file')}
+                              style={{ padding: '5px 10px', background: statusReportMode === 'file' ? '#323E48' : '#fff', color: statusReportMode === 'file' ? '#fff' : '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Upload PDF
+                            </button>
+                            <button
+                              onClick={() => setStatusReportMode('link')}
+                              style={{ padding: '5px 10px', background: statusReportMode === 'link' ? '#323E48' : '#fff', color: statusReportMode === 'link' ? '#fff' : '#323E48', border: '1px solid #CCCCCC', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Add Link
+                            </button>
+                          </div>
+                          <input
+                            placeholder="Report title (optional — defaults to filename)"
+                            value={statusReportTitle}
+                            onChange={e => setStatusReportTitle(e.target.value)}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          <input
+                            type="date"
+                            value={statusReportDate}
+                            onChange={e => setStatusReportDate(e.target.value)}
+                            style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                          />
+                          {statusReportMode === 'file' ? (
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={e => setStatusReportFile(e.target.files?.[0] || null)}
+                              style={{ fontSize: '12px' }}
+                            />
+                          ) : (
+                            <input
+                              placeholder="https://..."
+                              value={statusReportUrl}
+                              onChange={e => setStatusReportUrl(e.target.value)}
+                              style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #CCCCCC', borderRadius: '5px' }}
+                            />
+                          )}
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={createStatusReport}
+                              disabled={(statusReportMode === 'file' ? !statusReportFile : !statusReportUrl.trim()) || uploadingStatusReport}
+                              style={{ padding: '7px 14px', background: ((statusReportMode === 'file' ? !statusReportFile : !statusReportUrl.trim()) || uploadingStatusReport) ? '#C9CFD4' : '#A50021', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: 700, cursor: ((statusReportMode === 'file' ? !statusReportFile : !statusReportUrl.trim()) || uploadingStatusReport) ? 'default' : 'pointer', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              {uploadingStatusReport ? (statusReportMode === 'file' ? 'Uploading...' : 'Saving...') : (statusReportMode === 'file' ? 'Upload' : 'Save Link')}
+                            </button>
+                            <button
+                              onClick={() => { setAddingStatusReport(false); setStatusReportTitle(''); setStatusReportFile(null); setStatusReportUrl(''); setStatusReportDate(''); setStatusReportMode('file') }}
+                              style={{ padding: '7px 14px', background: '#fff', color: '#323E48', border: '1px solid #CCCCCC', borderRadius: '5px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {statusReports.length === 0 ? (
+                        <p style={{ fontSize: '12px', color: '#8a9199', textAlign: 'center', padding: '16px' }}>
+                          No status reports uploaded yet.
+                        </p>
+                      ) : statusReports
+                          .slice()
+                          .sort((a: any, b: any) => {
+                            const ad = a.report_date ? new Date(a.report_date).getTime() : 0
+                            const bd = b.report_date ? new Date(b.report_date).getTime() : 0
+                            if (ad !== bd) return bd - ad
+                            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                          })
+                          .map((d: any) => (
+                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid #EAECEE' }}>
+                          <span style={{ fontSize: '20px', flexShrink: 0 }}>{docIcon(d.file_type)}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '12px', fontWeight: 600, color: '#323E48' }}>{d.title}</p>
+                            <p style={{ fontSize: '10px', color: '#8a9199' }}>
+                              {d.report_date
+                                ? `Report date ${new Date(d.report_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · `
+                                : ''}
+                              Uploaded by {d.uploaded_by} · {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          </div>
+                          {d.file_type === 'link' ? (
+                            <a
+                              href={d.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              Open Link
+                            </a>
+                          ) : (
+                            <a
+                              href={`/api/documents/download?file=${encodeURIComponent(String(d.file_url).split('/').pop() || '')}`}
+                              style={{ padding: '6px 12px', background: '#00538C', color: '#fff', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              Download
+                            </a>
+                          )}
                           {isAdmin && (
                             <button
                               onClick={() => deleteSopDocument(d.id)}

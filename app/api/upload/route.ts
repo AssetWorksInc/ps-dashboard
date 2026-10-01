@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
     const title = formData.get('title') as string
     const category = formData.get('category') as string
     const projectId = formData.get('project_id') as string | null
+    // Optional date stamp for a Status Report entry -- the period the
+    // report covers, not the upload timestamp. Unused by ordinary Reference
+    // Document uploads, which just leave this out.
+    const reportDate = (formData.get('report_date') as string | null) || null
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 })
@@ -59,10 +63,10 @@ export async function POST(req: NextRequest) {
     // Save record to database — uploaded_by comes from the session, not the client.
     const result = await pool.query(
       `INSERT INTO shared_documents
-        (tenant_id, project_id, title, file_url, file_type, category, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, project_id, title, file_url, file_type, category, uploaded_by, created_at`,
-      [tenantId, projectId || null, title || file.name, `/uploads/${fileName}`, ext, category || 'General', user.name || 'Portal User']
+        (tenant_id, project_id, title, file_url, file_type, category, uploaded_by, report_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, project_id, title, file_url, file_type, category, uploaded_by, report_date, created_at`,
+      [tenantId, projectId || null, title || file.name, `/uploads/${fileName}`, ext, category || 'General', user.name || 'Portal User', reportDate]
     )
 
     await logActivity({

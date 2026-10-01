@@ -11,8 +11,8 @@ export async function GET() {
 
     const result = await pool.query(
       `SELECT
-        sd.id, sd.title, sd.file_url, sd.file_type,
-        sd.category, sd.uploaded_by, sd.created_at
+        sd.id, sd.title, sd.file_url, sd.url, sd.file_type,
+        sd.category, sd.uploaded_by, sd.report_date, sd.created_at
       FROM shared_documents sd
       WHERE sd.tenant_id = $1
       ORDER BY sd.created_at DESC`,

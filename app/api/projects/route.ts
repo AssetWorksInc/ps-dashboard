@@ -80,7 +80,7 @@ export async function GET() {
       params
     )
     const documents = await pool.query(
-      `SELECT id, project_id, title, description, file_url, file_type, category, uploaded_by, created_at
+      `SELECT id, project_id, title, description, file_url, url, file_type, category, uploaded_by, report_date, created_at
        FROM shared_documents
        ${scope}
        ORDER BY created_at DESC`,
