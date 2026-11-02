@@ -24,14 +24,13 @@ export default function LogoutButton() {
       style={{
         background: '#A50021',
         border: 'none',
-        borderRadius: '6px',
-        padding: '8px 16px',
-        fontSize: '13px',
+        borderRadius: '12px',
+        padding: '10px 18px',
+        fontSize: '14px',
         fontWeight: 600,
         color: '#ffffff',
         cursor: loggingOut ? 'default' : 'pointer',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-        fontFamily: 'Oswald, sans-serif',
+        fontFamily: 'inherit',
       }}
     >
       {loggingOut ? 'Logging out…' : '⏻ Log Out'}

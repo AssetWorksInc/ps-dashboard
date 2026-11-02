@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --aw-maroon:       #A50021;
@@ -13,8 +13,8 @@
   --aw-status-green: #2E7D32;
   --aw-status-amber: #F2A900;
   --aw-status-red:   #A50021;
-  --aw-font-head:    'Oswald', 'Arial Narrow', sans-serif;
-  --aw-font-body:    'Roboto', 'Segoe UI', Arial, sans-serif;
+  --aw-font-head:    'Inter', 'Segoe UI', Arial, sans-serif;
+  --aw-font-body:    'Inter', 'Segoe UI', Arial, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,7 @@ h1, h2, h3, h4 {
   font-family: var(--aw-font-head);
   font-weight: 700;
   color: var(--aw-slate);
-  letter-spacing: .2px;
+  letter-spacing: -.01em;
   margin: 0 0 .4em 0;
 }
 
@@ -44,3 +44,7 @@ a:hover { text-decoration: underline; }
   overflow-y: auto;
   background: var(--aw-bg);
 }
+
+/* Modern look, stage 1: pages still name Oswald/Roboto in inline styles.
+   These two rules switch them to the new font everywhere until each page is cleaned up. */
+[style*="Oswald"], [style*="Roboto"] { font-family: var(--aw-font-body) !important; }

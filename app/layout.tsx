@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 import ChatWidget from '@/components/ChatWidget'
-import LogoutButton from '@/components/LogoutButton'
+import TopBar from '@/components/TopBar'
 import { getCurrentUser } from '@/lib/auth'
 
 export const metadata: Metadata = {
@@ -26,9 +26,7 @@ export default async function RootLayout({
             overflowY: 'auto',
             background: '#F4F5F6'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '14px 24px 0' }}>
-              <LogoutButton />
-            </div>
+            <TopBar userName={user?.name} userRole={user?.role} />
             {children}
           </main>
         </div>
