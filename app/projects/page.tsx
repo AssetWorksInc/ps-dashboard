@@ -233,8 +233,14 @@ export default function ProjectCenter() {
     if (!m) return s || ''
     return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m[2]) - 1] + ' ' + Number(m[3]) + ', ' + m[1]
   }
-  const valueUsed = hoursUsed * hourlyRate
-  const valueRemaining = hoursRemaining * hourlyRate
+  // No hourly rate set on the project? PS staff get one worked out from OpenAir (budget fees / budget hours),
+  // so Value Used / Remaining are not left at $0. Customers are not sent the fee figures, so they never see it.
+  const oaRate = isAdmin && oa && Number(oa.budget_hours) > 0 && Number(oa.budget_fees) > 0
+    ? Number(oa.budget_fees) / Number(oa.budget_hours)
+    : 0
+  const effectiveRate = hourlyRate > 0 ? hourlyRate : oaRate
+  const valueUsed = hoursUsed * effectiveRate
+  const valueRemaining = hoursRemaining * effectiveRate
   const totalBilled = charges.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0)
   const pctUsed = hoursTotal > 0 ? Math.min(Math.round((hoursUsed / hoursTotal) * 100), 100) : 0
   const tabs = [
@@ -1872,7 +1878,7 @@ export default function ProjectCenter() {
                       ) : (
                         <>
                           <p style={{ fontSize: '11px', color: '#697077', margin: 0 }}>
-                            {hourlyRate > 0 ? `$${hourlyRate}/hr` : 'No hourly rate set'} · {hoursTotal > 0 ? `${hoursTotal} budgeted hours` : 'No hour budget set'}
+                            {hourlyRate > 0 ? `$${hourlyRate}/hr` : oaRate > 0 ? `About $${oaRate.toFixed(0)}/hr (worked out from OpenAir fees ÷ hours; no rate set)` : 'No hourly rate set'} · {hoursTotal > 0 ? `${hoursTotal} budgeted hours` : 'No hour budget set'}
                           </p>
                           {!selectedProject.budget_manual_override && hoursTotal === 0 && hoursUsed === 0 && !hasActivityDetailImport && (
                             <p style={{ fontSize: '10.5px', color: '#8a9199', margin: '6px 0 0', fontStyle: 'italic' as const }}>
