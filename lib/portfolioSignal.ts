@@ -18,6 +18,9 @@ export type SignalInput = {
   pctComplete: number | null
   contractSignedDate: string | null
   lastTimeEntryDate: string | null
+  // false = we cannot tell yet whether the project is moving (no activity
+  // history), so the "no recent time entry" penalties are skipped.
+  activityKnown?: boolean
   servicesBacklog: number | null
   epic: string | null
 }
@@ -35,8 +38,11 @@ export function signalFor(p: SignalInput, today: string): Signal {
   const backlog = p.servicesBacklog ?? 0
   const hasBacklog = backlog > 0
   const days = daysSince(p.lastTimeEntryDate, today)
+  const activityKnown = p.activityKnown !== false
 
-  if (hasBacklog && days === null) {
+  if (!activityKnown) {
+    // nothing to say about activity yet
+  } else if (hasBacklog && days === null) {
     score -= 35
     reasons.push('Backlog remaining and no time entry ever recorded')
   } else if (hasBacklog && days !== null && days > 180) {

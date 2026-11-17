@@ -68,6 +68,15 @@ function num(s) {
   const n = Number(t)
   return Number.isFinite(n) ? n : null
 }
+function validIso(t) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t || ''); if (!m) return null
+  const y = +m[1], mo = +m[2], d = +m[3]
+  if (y < 1900 || y > 2200 || mo < 1 || mo > 12 || d < 1 || d > 31) return null
+  const dt = new Date(Date.UTC(y, mo - 1, d))
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d ? t : null
+}
+// OpenAir writes "0000-00-00" for an empty date; anything that is not a real date becomes null.
+function isoOrMdy(s) { const t = (s || '').trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return validIso(t); return validIso(mdyToIso(t)) }
 function mdyToIso(s) { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s || ''); return m ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : null }
 
 // Returns { ok:true, reportDate, generatedAt, rows } or { ok:false, reason }
@@ -98,6 +107,8 @@ function parseReport(csvText) {
     if (!label) continue
     rows.push({
       label,
+      clientName: ix['Client'] != null ? ((r[ix['Client']] || '').trim() || null) : null,
+      contractSignedDate: ix['Contract Signed Date'] != null ? (isoOrMdy(r[ix['Contract Signed Date']])) : null,
       projectOwner: r[ix['Project owner']] || null,
       primeResource: ix['Prime Resource'] != null ? (r[ix['Prime Resource']] || null) : null,
       contractType: ix['Contract Type'] != null ? ((r[ix['Contract Type']] || '').trim() || null) : null,
@@ -187,17 +198,19 @@ async function ingestBuffer(pool, key, buf) {
       await client.query(
         `INSERT INTO openair_project_snapshots
            (report_date, generated_at, label, project_id, project_owner, prime_resource, contract_type, project_stage,
-            budget_hours, hours_to_date, remaining_hours, budget_fees, fees_to_date, total_invoiced, invoiced_outstanding)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+            budget_hours, hours_to_date, remaining_hours, budget_fees, fees_to_date, total_invoiced, invoiced_outstanding,
+            client_name, contract_signed_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          ON CONFLICT (report_date, label) DO UPDATE SET
            generated_at = EXCLUDED.generated_at, project_id = EXCLUDED.project_id, project_owner = EXCLUDED.project_owner,
            prime_resource = EXCLUDED.prime_resource, contract_type = EXCLUDED.contract_type, project_stage = EXCLUDED.project_stage,
            budget_hours = EXCLUDED.budget_hours, hours_to_date = EXCLUDED.hours_to_date, remaining_hours = EXCLUDED.remaining_hours,
            budget_fees = EXCLUDED.budget_fees, fees_to_date = EXCLUDED.fees_to_date, total_invoiced = EXCLUDED.total_invoiced,
-           invoiced_outstanding = EXCLUDED.invoiced_outstanding
+           invoiced_outstanding = EXCLUDED.invoiced_outstanding,
+           client_name = EXCLUDED.client_name, contract_signed_date = EXCLUDED.contract_signed_date
          WHERE EXCLUDED.generated_at >= openair_project_snapshots.generated_at`,
         [rep.reportDate, rep.generatedAt, r.label, matches.get(r.label) || null, r.projectOwner, r.primeResource, r.contractType,
-         r.projectStage, r.budgetHours, r.hoursToDate, r.remainingHours, r.budgetFees, r.feesToDate, r.totalInvoiced, r.invoicedOutstanding])
+         r.projectStage, r.budgetHours, r.hoursToDate, r.remainingHours, r.budgetFees, r.feesToDate, r.totalInvoiced, r.invoicedOutstanding, r.clientName, r.contractSignedDate])
     }
 
     let updated = 0

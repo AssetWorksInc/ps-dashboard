@@ -20,6 +20,8 @@ type ProjectRow = {
   pctComplete: number | null
   contractSignedDate: string | null
   lastTimeEntryDate: string | null
+  activityKnown?: boolean
+  linked?: boolean
   servicesBacklog: number | null
   servicesRevenue: number | null
   openairUrl: string | null
@@ -104,12 +106,15 @@ export default function ManagementDashboardPage() {
     const atRiskCount = byStatus.RED.count + byStatus.GREY.count
     const stale = all.filter((p) => {
       const d = daysAgo(p.lastTimeEntryDate)
-      return (p.servicesBacklog || 0) > 0 && (d === null || d > 90)
+      return (p.servicesBacklog || 0) > 0 && p.activityKnown !== false && (d === null || d > 90)
     })
-    const triage = all.filter((p) => p.engagementStatus === 'OPEN')
+    const triage = all.filter((p) => p.engagementStatus === 'OPEN' && p.linked !== false)
     const byClient: Record<string, number> = {}
+    const clientKeys: Record<string, string> = {}
     all.forEach((p) => {
-      byClient[p.client] = (byClient[p.client] || 0) + (p.servicesBacklog || 0)
+      // OpenAir spells the same customer in different cases; group them as one
+      const key = clientKeys[p.client.trim().toLowerCase()] || (clientKeys[p.client.trim().toLowerCase()] = p.client.trim())
+      byClient[key] = (byClient[key] || 0) + (p.servicesBacklog || 0)
     })
     const clientRank = Object.entries(byClient)
       .sort((a, b) => b[1] - a[1])

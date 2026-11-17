@@ -20,6 +20,8 @@ type ProjectRow = {
   pctComplete: number | null
   contractSignedDate: string | null
   lastTimeEntryDate: string | null
+  activityKnown?: boolean
+  linked?: boolean
   servicesBacklog: number | null
   servicesRevenue: number | null
   openairUrl: string | null
@@ -135,12 +137,15 @@ export default function PortfolioPage() {
     })
     const stale = all.filter((p) => {
       const d = daysAgo(p.lastTimeEntryDate)
-      return (p.servicesBacklog || 0) > 0 && (d === null || d > 90)
+      return (p.servicesBacklog || 0) > 0 && p.activityKnown !== false && (d === null || d > 90)
     })
-    const triage = all.filter((p) => p.engagementStatus === 'OPEN')
+    const triage = all.filter((p) => p.engagementStatus === 'OPEN' && p.linked !== false)
     const byClient: Record<string, number> = {}
+    const clientKeys: Record<string, string> = {}
     all.forEach((p) => {
-      byClient[p.client] = (byClient[p.client] || 0) + (p.servicesBacklog || 0)
+      // OpenAir spells the same customer in different cases; group them as one
+      const key = clientKeys[p.client.trim().toLowerCase()] || (clientKeys[p.client.trim().toLowerCase()] = p.client.trim())
+      byClient[key] = (byClient[key] || 0) + (p.servicesBacklog || 0)
     })
     const clientRank = Object.entries(byClient)
       .sort((a, b) => b[1] - a[1])
@@ -171,7 +176,7 @@ export default function PortfolioPage() {
       if (backlogOnly && !((p.servicesBacklog || 0) > 0)) return false
       if (staleOnly) {
         const d = daysAgo(p.lastTimeEntryDate)
-        const isStale = (p.servicesBacklog || 0) > 0 && (d === null || d > 90)
+        const isStale = (p.servicesBacklog || 0) > 0 && p.activityKnown !== false && (d === null || d > 90)
         if (!isStale) return false
       }
       if (noEpicOnly && p.epic) return false
@@ -204,13 +209,14 @@ export default function PortfolioPage() {
   }, [projects, q, prime, statusFilter, backlogOnly, staleOnly, noEpicOnly, sortKey, sortDir])
 
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected])
-  const allFilteredSelected = filteredSorted.length > 0 && filteredSorted.every((p) => selected[p.id])
+  const selectableFiltered = filteredSorted.filter((p) => p.linked !== false)
+  const allFilteredSelected = selectableFiltered.length > 0 && selectableFiltered.every((p) => selected[p.id])
 
   function toggleSelectAllFiltered() {
     const shouldSelect = !allFilteredSelected
     setSelected((s) => {
       const next = { ...s }
-      filteredSorted.forEach((p) => { next[p.id] = shouldSelect })
+      filteredSorted.forEach((p) => { if (p.linked !== false) next[p.id] = shouldSelect })
       return next
     })
   }
@@ -476,7 +482,7 @@ export default function PortfolioPage() {
                 <Fragment key={p.id}>
                   <tr id={'row-' + p.id} style={{ background: isRed ? '#FDF2F4' : undefined }}>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      <input type="checkbox" checked={!!selected[p.id]} onChange={() => setSelected((s) => ({ ...s, [p.id]: !s[p.id] }))} aria-label={'Select ' + p.name} />
+                      {p.linked !== false && <input type="checkbox" checked={!!selected[p.id]} onChange={() => setSelected((s) => ({ ...s, [p.id]: !s[p.id] }))} aria-label={'Select ' + p.name} />}
                     </td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'top' }}>
                       <div style={{ fontWeight: 700, color: INK }}>{p.name}</div>
@@ -486,13 +492,13 @@ export default function PortfolioPage() {
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' }}>{p.pid || ''}</td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>{p.client}</td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
-                      <select
+                      {p.linked === false ? <span title="Not a portal project yet, so a status can't be set" style={{ fontSize: '10.5px', color: MUTED }}>Not in portal</span> : <select
                         value={p.engagementStatus}
                         onChange={(e) => saveField(p.id, 'engagement_status', e.target.value)}
                         style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10px', textTransform: 'uppercase', borderRadius: '999px', padding: '2px 7px', border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, cursor: 'pointer' }}
                       >
                         {STATUS_ORDER.map((k) => <option key={k} value={k}>{STATUS_META[k].label}</option>)}
-                      </select>
+                      </select>}
                     </td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
                       <span style={{ display: 'inline-block', fontFamily: 'Oswald, sans-serif', fontSize: '10px', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '999px', background: sigColor.bg, color: sigColor.c }}>
@@ -511,16 +517,18 @@ export default function PortfolioPage() {
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
                       {p.lastTimeEntryDate
                         ? <>{shortDate(p.lastTimeEntryDate)}<div style={{ fontSize: '10px', color: MUTED }}>{d}d ago</div></>
-                        : <span style={{ background: '#F7E2E6', color: RED, padding: '1px 6px', borderRadius: '8px', fontSize: '10px' }}>never</span>}
+                        : p.activityKnown === false
+                          ? <span style={{ color: MUTED, fontSize: '10px' }}>not tracked yet</span>
+                          : <span style={{ background: '#F7E2E6', color: RED, padding: '1px 6px', borderRadius: '8px', fontSize: '10px' }}>never</span>}
                     </td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>{p.primeResource || ''}</td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' }}>
-                      <button
+                      {p.linked === false ? <span style={{ fontSize: '10.5px', color: MUTED }}>read-only</span> : <button
                         onClick={() => setExpanded((e) => ({ ...e, [p.id]: !e[p.id] }))}
                         style={{ fontFamily: 'Oswald, sans-serif', fontSize: '10.5px', fontWeight: 700, border: `1px solid ${RED}`, background: isExpanded ? RED : '#fff', color: isExpanded ? '#fff' : RED, borderRadius: '6px', padding: '3px 10px', cursor: 'pointer' }}
                       >
                         {isExpanded ? 'Hide' : 'Edit'}
-                      </button>
+                      </button>}
                     </td>
                   </tr>
                   {isExpanded && (
