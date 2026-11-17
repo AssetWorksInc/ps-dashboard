@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { getCurrentUser } from '@/lib/auth'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const tenantSlug = searchParams.get('tenantSlug') || 'lakewood'
-
-    const tenantResult = await pool.query(
-      'SELECT id FROM tenants WHERE slug = $1',
-      [tenantSlug]
-    )
-
-    if (tenantResult.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 })
+    // Must be logged in, and you only ever get your own customer's notifications.
+    // (This route used to be open to anyone and took a customer name from the URL.)
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
     }
-
-    const tenantId = tenantResult.rows[0].id
+    const tenantId = user.tenantId
 
     const [activityResult, announcementsResult] = await Promise.all([
       pool.query(
