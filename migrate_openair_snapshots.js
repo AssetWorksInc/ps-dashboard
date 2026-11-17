@@ -51,6 +51,8 @@ async function main() {
   // Added later so the Management Center can list every OpenAir project (even ones not in the portal yet).
   await pool.query(`ALTER TABLE openair_project_snapshots ADD COLUMN IF NOT EXISTS client_name text`)
   await pool.query(`ALTER TABLE openair_project_snapshots ADD COLUMN IF NOT EXISTS contract_signed_date date`)
+  // Currency of the money columns for that project (OpenAir writes "444588.25 GBP" after Budget Fees). NULL = USD.
+  await pool.query(`ALTER TABLE openair_project_snapshots ADD COLUMN IF NOT EXISTS currency text`)
   await pool.query(`CREATE INDEX IF NOT EXISTS openair_snapshots_project_idx ON openair_project_snapshots (project_id, report_date)`)
   for (const t of ['openair_ingest_log', 'openair_project_snapshots']) {
     const r = await pool.query(

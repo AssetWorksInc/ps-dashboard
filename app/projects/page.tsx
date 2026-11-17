@@ -186,7 +186,7 @@ export default function ProjectCenter() {
       {hLabel(h)}
     </span>
   )
-  const fmtMoney = (n: number) => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+  const fmtMoney = (n: number, cur?: string | null) => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: cur || 'USD', maximumFractionDigits: 0 }) + (cur && cur !== 'USD' ? ' ' + cur : '')
   const toDateTimeLocal = (d: string | null | undefined) => {
     if (!d) return ''
     const dt = new Date(d)
@@ -235,7 +235,7 @@ export default function ProjectCenter() {
   }
   // No hourly rate set on the project? PS staff get one worked out from OpenAir (budget fees / budget hours),
   // so Value Used / Remaining are not left at $0. Customers are not sent the fee figures, so they never see it.
-  const oaRate = isAdmin && oa && Number(oa.budget_hours) > 0 && Number(oa.budget_fees) > 0
+  const oaRate = isAdmin && oa && !oa.currency && Number(oa.budget_hours) > 0 && Number(oa.budget_fees) > 0
     ? Number(oa.budget_fees) / Number(oa.budget_hours)
     : 0
   const effectiveRate = hourlyRate > 0 ? hourlyRate : oaRate
@@ -1791,10 +1791,10 @@ export default function ProjectCenter() {
                         {isAdmin && oa.total_invoiced !== undefined && (
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
                             {[
-                              { label: 'Budget Fees', value: fmtMoney(oa.budget_fees), color: '#323E48' },
-                              { label: 'Fees To Date', value: fmtMoney(oa.fees_to_date), color: '#00538C' },
-                              { label: 'Total Invoiced', value: fmtMoney(oa.total_invoiced), color: '#8a6400' },
-                              { label: 'Invoiced Outstanding', value: fmtMoney(oa.invoiced_outstanding), color: Number(oa.invoiced_outstanding) > 0 ? '#A50021' : '#2E7D32' },
+                              { label: 'Budget Fees', value: fmtMoney(oa.budget_fees, oa.currency), color: '#323E48' },
+                              { label: 'Fees To Date', value: fmtMoney(oa.fees_to_date, oa.currency), color: '#00538C' },
+                              { label: 'Total Invoiced', value: fmtMoney(oa.total_invoiced, oa.currency), color: '#8a6400' },
+                              { label: 'Invoiced Outstanding', value: fmtMoney(oa.invoiced_outstanding, oa.currency), color: Number(oa.invoiced_outstanding) > 0 ? '#A50021' : '#2E7D32' },
                             ].map((k, i) => (
                               <div key={i} style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '10px 12px' }}>
                                 <p style={{ fontSize: '9px', color: '#8a9199', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', fontFamily: 'Oswald, sans-serif' }}>{k.label}</p>

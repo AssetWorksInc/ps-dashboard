@@ -24,6 +24,7 @@ type ProjectRow = {
   linked?: boolean
   servicesBacklog: number | null
   servicesRevenue: number | null
+  currency?: string | null
   openairUrl: string | null
   signal: { level: 'green' | 'amber' | 'red'; score: number; label: string; reasons: string[] }
 }

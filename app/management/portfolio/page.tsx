@@ -24,6 +24,9 @@ type ProjectRow = {
   linked?: boolean
   servicesBacklog: number | null
   servicesRevenue: number | null
+  currency?: string | null
+  localBacklog?: number | null
+  localRevenue?: number | null
   openairUrl: string | null
   signal: { level: 'green' | 'amber' | 'red'; score: number; label: string; reasons: string[] }
 }
@@ -56,6 +59,10 @@ function shortDate(d: string | null): string {
   if (!d) return ''
   const dt = new Date(d + 'T12:00:00')
   return dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })
+}
+
+function local(n: number | null | undefined, cur: string): string {
+  return (n || 0).toLocaleString('en-US', { style: 'currency', currency: cur, maximumFractionDigits: 0 }) + ' ' + cur
 }
 
 function daysAgo(d: string | null): number | null {
@@ -290,6 +297,7 @@ export default function PortfolioPage() {
       <h1 style={{ fontFamily: 'Oswald, sans-serif', fontSize: '20px', fontWeight: 600, color: INK, margin: '0 0 4px' }}>Portfolio</h1>
       <p style={{ fontSize: '12px', color: MUTED, marginTop: 0, marginBottom: '16px' }}>
         {totals.count} projects · row total {money(totals.backlog)}
+        {(projects || []).some((p) => p.currency) && ' · ' + (projects || []).filter((p) => p.currency).length + ' billed in another currency, shown in that currency and left out of the dollar totals'}
       </p>
       <div style={{ borderLeft: `3px solid ${RED}`, background: '#FBEFF1', padding: '8px 12px', borderRadius: '4px', fontSize: '11.5px', color: '#3a4650', marginBottom: '18px' }}>
         Engagement status is set by a person and stays with the project through every NetSuite import. Delivery signal is calculated from the data and shown beside it — the two are never merged.
@@ -511,8 +519,8 @@ export default function PortfolioPage() {
                         : <span style={{ color: MUTED, fontSize: '11px' }}>not linked</span>}
                     </td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' }}>{p.pctComplete === null ? <span style={{ color: MUTED }}>n/a</span> : p.pctComplete.toFixed(2)}</td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right', color: (p.servicesBacklog || 0) < 0 ? RED : undefined }}>{money(p.servicesBacklog)}</td>
-                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right', color: MUTED }}>{money(p.servicesRevenue)}</td>
+                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right', color: (p.servicesBacklog || 0) < 0 ? RED : undefined }}>{p.currency ? <span title="Billed in another currency, left out of the dollar totals">{local(p.localBacklog, p.currency)}</span> : money(p.servicesBacklog)}</td>
+                    <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right', color: MUTED }}>{p.currency ? local(p.localRevenue, p.currency) : money(p.servicesRevenue)}</td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>{p.contractSignedDate ? shortDate(p.contractSignedDate) : <span style={{ color: MUTED }}>not set</span>}</td>
                     <td style={{ padding: '6px 9px', borderBottom: `1px solid ${BORDER}` }}>
                       {p.lastTimeEntryDate

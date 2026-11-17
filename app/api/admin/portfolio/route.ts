@@ -68,13 +68,13 @@ export async function GET() {
        oa.prime_resource AS oa_prime_resource,
        oa.budget_hours AS oa_budget_hours, oa.hours_to_date AS oa_hours_to_date,
        oa.budget_fees AS oa_budget_fees, oa.fees_to_date AS oa_fees_to_date,
-       oa.contract_signed_date AS oa_contract_signed_date,
+       oa.contract_signed_date AS oa_contract_signed_date, oa.currency AS oa_currency,
        act.d AS oa_last_activity
      FROM projects p
      JOIN tenants t ON t.id = p.tenant_id
      LEFT JOIN netsuite_dashboard_rows ndr ON ndr.project_id = p.id
      LEFT JOIN LATERAL (
-       SELECT s.prime_resource, s.budget_hours, s.hours_to_date, s.budget_fees, s.fees_to_date, s.contract_signed_date
+       SELECT s.prime_resource, s.budget_hours, s.hours_to_date, s.budget_fees, s.fees_to_date, s.contract_signed_date, s.currency
        FROM openair_project_snapshots s
        WHERE s.project_id = p.id
        ORDER BY s.report_date DESC, s.generated_at DESC NULLS LAST
@@ -153,8 +153,14 @@ export async function GET() {
       contractSignedDate,
       lastTimeEntryDate,
       activityKnown,
-      servicesBacklog: backlog,
-      servicesRevenue,
+      // Projects billed in another currency (GBP, CAD ...) are kept out of the
+      // dollar totals: servicesBacklog/servicesRevenue stay null and the amounts
+      // are returned in their own currency instead.
+      servicesBacklog: r.oa_currency ? null : backlog,
+      servicesRevenue: r.oa_currency ? null : servicesRevenue,
+      currency: r.oa_currency || null,
+      localBacklog: r.oa_currency ? backlog : null,
+      localRevenue: r.oa_currency ? servicesRevenue : null,
       openairUrl: r.pid ? `https://app.openair.com/projects/${r.pid}` : null,
       signal,
     }
@@ -165,7 +171,7 @@ export async function GET() {
   // customer can see these. They update by themselves with each daily report.
   const unlinked = await pool.query(
     `SELECT s.label, s.client_name, s.prime_resource, s.budget_hours, s.hours_to_date,
-            s.budget_fees, s.fees_to_date, s.contract_signed_date,
+            s.budget_fees, s.fees_to_date, s.contract_signed_date, s.currency,
             (SELECT MAX(x.report_date) FROM (
                SELECT a.report_date, a.hours_to_date,
                       LAG(a.hours_to_date) OVER (ORDER BY a.report_date) AS prev
@@ -211,8 +217,11 @@ export async function GET() {
       contractSignedDate,
       lastTimeEntryDate,
       activityKnown,
-      servicesBacklog: backlog,
-      servicesRevenue: feesToDate,
+      servicesBacklog: r.currency ? null : backlog,
+      servicesRevenue: r.currency ? null : feesToDate,
+      currency: r.currency || null,
+      localBacklog: r.currency ? backlog : null,
+      localRevenue: r.currency ? feesToDate : null,
       openairUrl: null,
       signal,
     }

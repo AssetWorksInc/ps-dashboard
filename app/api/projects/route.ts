@@ -125,7 +125,7 @@ export async function GET() {
         `SELECT DISTINCT ON (s.project_id)
                 s.project_id, s.label, s.contract_type, s.budget_hours, s.hours_to_date, s.remaining_hours,
                 to_char(s.report_date, 'YYYY-MM-DD') AS report_date,
-                to_char(s.generated_at, 'YYYY-MM-DD HH24:MI') AS generated_at${moneyCols}
+                to_char(s.generated_at, 'YYYY-MM-DD HH24:MI') AS generated_at, s.currency${moneyCols}
          FROM openair_project_snapshots s
          JOIN projects pp ON pp.id = s.project_id
          WHERE s.project_id IS NOT NULL ${isAdmin ? '' : 'AND pp.tenant_id = $1'}
