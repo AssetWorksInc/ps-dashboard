@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { cookies } from 'next/headers'
-import { signSession, SESSION_MAX_AGE_SECONDS } from '@/lib/session'
 
 export async function POST(req: Request) {
   try {
@@ -24,21 +23,16 @@ export async function POST(req: Request) {
 
     const user = result.rows[0]
 
-    // The cookie carries only a signed user id; name, role and tenant are always
-    // read from the database (lib/auth.ts), never from the browser.
-    const token = signSession(String(user.id))
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Server is missing AUTH_SECRET' },
-        { status: 500 }
-      )
-    }
     const cookieStore = await cookies()
-    cookieStore.set('ps_user', token, {
+    cookieStore.set('ps_user', JSON.stringify({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: SESSION_MAX_AGE_SECONDS,
+      maxAge: 60 * 60 * 24 * 7,
       path: '/'
     })
 
