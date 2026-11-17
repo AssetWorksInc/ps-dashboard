@@ -225,6 +225,14 @@ export default function ProjectCenter() {
   const hoursRemaining = Math.max(hoursTotal - hoursUsed, 0)
   const hasActivityDetailImport = (data?.netsuiteTaskRows || []).some((r: any) => r.project_id === selectedProject?.id)
   const hourlyRate = Number(selectedProject?.hourly_rate) || 0
+  // Latest OpenAir daily-report snapshot for this project (hours for everyone, dollars for PS staff only).
+  const oa = (data?.openairSnapshots || []).find((s: any) => s.project_id === selectedProject?.id)
+  const fmtHrs = (n: any) => (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })
+  const fmtYmd = (s: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '')
+    if (!m) return s || ''
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m[2]) - 1] + ' ' + Number(m[3]) + ', ' + m[1]
+  }
   const valueUsed = hoursUsed * hourlyRate
   const valueRemaining = hoursRemaining * hourlyRate
   const totalBilled = charges.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0)
@@ -1749,6 +1757,48 @@ export default function ProjectCenter() {
                     <div style={{ height: '8px', background: '#EAECEE', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' }}>
                       <div style={{ height: '100%', width: `${pctUsed}%`, background: pctUsed >= 90 ? '#A50021' : pctUsed >= 70 ? '#F2A900' : '#2E7D32', borderRadius: '4px' }} />
                     </div>
+                    {/* OpenAir daily report */}
+                    {oa && (
+                      <div style={{ border: '1px solid #CCCCCC', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', background: '#ffffff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                          <p style={{ fontFamily: 'Oswald, sans-serif', fontSize: '11px', fontWeight: 700, color: '#323E48', textTransform: 'uppercase', letterSpacing: '.5px', margin: 0 }}>
+                            Hours &amp; Billing from OpenAir
+                          </p>
+                          <span style={{ fontSize: '11px', color: '#8a9199' }}>
+                            Updated daily · report of {fmtYmd(oa.report_date)}{oa.contract_type ? ` · ${oa.contract_type}` : ''}
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: isAdmin ? '10px' : 0 }}>
+                          {[
+                            { label: 'Budget Hours', value: fmtHrs(oa.budget_hours), color: '#323E48' },
+                            { label: 'Hours To Date', value: fmtHrs(oa.hours_to_date), color: '#00538C' },
+                            Number(oa.remaining_hours) < 0
+                              ? { label: 'Hours Over Budget', value: fmtHrs(Math.abs(Number(oa.remaining_hours))), color: '#A50021' }
+                              : { label: 'Hours Remaining', value: fmtHrs(oa.remaining_hours), color: '#2E7D32' },
+                          ].map((k, i) => (
+                            <div key={i} style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '10px 12px' }}>
+                              <p style={{ fontSize: '9px', color: '#8a9199', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', fontFamily: 'Oswald, sans-serif' }}>{k.label}</p>
+                              <p style={{ fontSize: '15px', fontWeight: 700, color: k.color, fontFamily: 'Oswald, sans-serif' }}>{k.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {isAdmin && oa.total_invoiced !== undefined && (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+                            {[
+                              { label: 'Budget Fees', value: fmtMoney(oa.budget_fees), color: '#323E48' },
+                              { label: 'Fees To Date', value: fmtMoney(oa.fees_to_date), color: '#00538C' },
+                              { label: 'Total Invoiced', value: fmtMoney(oa.total_invoiced), color: '#8a6400' },
+                              { label: 'Invoiced Outstanding', value: fmtMoney(oa.invoiced_outstanding), color: Number(oa.invoiced_outstanding) > 0 ? '#A50021' : '#2E7D32' },
+                            ].map((k, i) => (
+                              <div key={i} style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '6px', padding: '10px 12px' }}>
+                                <p style={{ fontSize: '9px', color: '#8a9199', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', fontFamily: 'Oswald, sans-serif' }}>{k.label}</p>
+                                <p style={{ fontSize: '15px', fontWeight: 700, color: k.color, fontFamily: 'Oswald, sans-serif' }}>{k.value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {/* Budget settings editor */}
                     <div style={{ background: '#F4F5F6', border: '1px solid #CCCCCC', borderRadius: '8px', padding: '14px 16px', marginBottom: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: editingBudgetSettings ? '12px' : 0 }}>

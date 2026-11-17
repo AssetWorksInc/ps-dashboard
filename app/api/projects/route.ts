@@ -113,9 +113,33 @@ export async function GET() {
        ORDER BY ndr.project_id, ndr.created_at ASC`,
       params
     )
+    // Latest OpenAir daily-report snapshot per project (filled by scripts/openair-ingest.js).
+    // Hours go to everyone who can see the project; dollar figures are PS-staff only and are
+    // not even selected for customers. A failure here must never break the Project Center.
+    let openairSnapshots: any[] = []
+    try {
+      const moneyCols = isAdmin
+        ? ', s.budget_fees, s.fees_to_date, s.total_invoiced, s.invoiced_outstanding'
+        : ''
+      const oa = await pool.query(
+        `SELECT DISTINCT ON (s.project_id)
+                s.project_id, s.label, s.contract_type, s.budget_hours, s.hours_to_date, s.remaining_hours,
+                to_char(s.report_date, 'YYYY-MM-DD') AS report_date,
+                to_char(s.generated_at, 'YYYY-MM-DD HH24:MI') AS generated_at${moneyCols}
+         FROM openair_project_snapshots s
+         JOIN projects pp ON pp.id = s.project_id
+         WHERE s.project_id IS NOT NULL ${isAdmin ? '' : 'AND pp.tenant_id = $1'}
+         ORDER BY s.project_id, s.report_date DESC, s.generated_at DESC`,
+        params
+      )
+      openairSnapshots = oa.rows
+    } catch (e) {
+      openairSnapshots = []
+    }
     return NextResponse.json({
       isAdmin,
       projects: projects.rows,
+      openairSnapshots,
       deliverables: deliverables.rows,
       projectTasks: projectTasks.rows,
       contacts: contacts.rows,
